@@ -1,7 +1,7 @@
 [project]
 name = "smevals"
 version = "0.1.0"
-description = "A tool for small model evals"
+description = "A framework for running evals against small (and large) models"
 readme = "README.md"
 authors = [
     { name = "Simon Willison" }

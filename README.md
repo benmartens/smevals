@@ -1,6 +1,6 @@
 # smevals
 
-A tool for small model evals.
+A framework for running evals against small (and large) models
 
 `smevals` is a Python CLI utility for running evals against LLMs and agent harnesses.
 
