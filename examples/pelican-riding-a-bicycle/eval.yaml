@@ -1,0 +1,5 @@
+name: pelican-riding-a-bicycle
+description: >-
+  Can the model draw a pelican riding a bicycle as an SVG?
+  Tests spatial reasoning and knowledge of both SVG syntax and
+  the anatomy of pelicans and bicycles.

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Runner contract:
+#   inputs:  $SMEVAL_MODEL, $SMEVAL_PROMPT, $SMEVAL_TASK, $SMEVAL_RUN_DIR
+#   cwd:     the run directory — files written here are kept as artifacts
+#   stdout:  the model's response (saved by smeval as output.txt)
+#   exit:    non-zero marks the Run as failed
+set -euo pipefail
+
+llm -m "$SMEVAL_MODEL" "$SMEVAL_PROMPT"
+llm logs -c --json > log.json

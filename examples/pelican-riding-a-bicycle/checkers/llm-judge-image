@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Scores $SMEVAL_CHECK_IMAGE against $SMEVAL_CHECK_RUBRIC using a vision
+# model. The --schema forces {score, notes} JSON, which is exactly the
+# check result format smeval expects on stdout. Full JSON schema with
+# additionalProperties false - required by OpenAI strict structured output.
+set -euo pipefail
+
+llm -m "$SMEVAL_CHECK_MODEL" -a "$SMEVAL_CHECK_IMAGE" \
+  --schema '{
+    "type": "object",
+    "properties": {
+      "score": {"type": "integer", "description": "the score"},
+      "notes": {"type": "string", "description": "short explanation of the scoring"}
+    },
+    "required": ["score", "notes"],
+    "additionalProperties": false
+  }' \
+  "$SMEVAL_CHECK_RUBRIC"
+llm logs -c --json > judge-log.json

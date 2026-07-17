@@ -1,0 +1,34 @@
+name: default
+checks:
+  # Pull the SVG out of the model response - handles fenced code
+  # blocks and surrounding prose. Fails if no SVG is found at all,
+  # and being required that halts grading early.
+  - checker: ../checkers/extract-svg
+    creates: extracted.svg
+    required: true
+
+  # Strict validation of what was extracted
+  - checker: xml-valid
+    file: extracted.svg
+    required: true
+
+  # Render to a raster image, kept as a Grade artifact
+  - checker: ../checkers/render-svg
+    input: extracted.svg
+    creates: render.png
+    required: true
+
+  # Score the rendered image with a vision model
+  - checker: ../checkers/llm-judge-image
+    image: render.png
+    model: openai-codex/gpt-5.6-sol
+    rubric: >-
+      Score this image from 0 to 10. Award up to 3 points for containing
+      a recognizable pelican, up to 3 points for a recognizable bicycle,
+      up to 2 points for the pelican plausibly riding the bicycle, and
+      up to 2 points for overall composition and charm.
+
+scoring:
+  # The Grade fails if any required Check fails; otherwise the
+  # score from the final Check decides pass/fail
+  pass_threshold: 5

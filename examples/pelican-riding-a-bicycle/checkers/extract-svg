@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# Checker contract:
+#   inputs:  $SMEVAL_RUN_DIR, $SMEVAL_CHECK (JSON), $SMEVAL_CHECK_* per config key
+#   cwd:     the grade workspace - files written here are kept as artifacts
+#   stdout:  optional JSON with extra result fields (score, notes)
+#   exit:    0 = check passed, non-zero = failed
+import json
+import os
+import pathlib
+import re
+import sys
+
+text = (pathlib.Path(os.environ["SMEVAL_RUN_DIR"]) / "output.txt").read_text()
+# First <svg through last </svg> - forgiving of fenced code blocks
+# and surrounding prose; strict validation happens in later checks
+match = re.search(r"<svg.*</svg>", text, re.DOTALL)
+if not match:
+    sys.exit("No <svg>...</svg> block found in output.txt")
+target = os.environ.get("SMEVAL_CHECK_CREATES", "extracted.svg")
+pathlib.Path(target).write_text(match.group(0))
+print(json.dumps({"notes": f"extracted {len(match.group(0))} bytes of SVG"}))

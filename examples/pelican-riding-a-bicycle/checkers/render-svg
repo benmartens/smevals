@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Renders $SMEVAL_CHECK_INPUT to $SMEVAL_CHECK_CREATES using rsvg-convert.
+# White background because transparent PNGs reach vision models
+# unpredictably; fixed width so every model is judged at the same size.
+set -euo pipefail
+
+rsvg-convert --background-color=white --width=800 \
+  "$SMEVAL_CHECK_INPUT" -o "$SMEVAL_CHECK_CREATES"
+echo "{\"notes\": \"$(rsvg-convert --version | head -1)\"}"
