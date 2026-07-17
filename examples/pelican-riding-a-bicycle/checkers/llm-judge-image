@@ -63,8 +63,8 @@ print(
     json.dumps(
         {
             "score": judged["score"] / 10,
-            "tags": judged["tags"],
-            "notes": judged["notes"],
+            "tags": judged.get("tags") or [],
+            "notes": judged.get("notes", ""),
             "details": {"raw_score": judged["score"]},
         }
     )
