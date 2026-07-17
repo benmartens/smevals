@@ -371,9 +371,19 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
         if not ok and check.get("required"):
             halted = True
 
-    # The score for the Grade is the last score any check produced
-    score = next(
-        (r["score"] for r in reversed(results) if r.get("score") is not None), None
+    # The score for the Grade is the last score any check produced - but
+    # a check that failed without scoring leaves the Grade unscored, so a
+    # stale score from an earlier check can't stand in for it
+    unscored_failure = any(
+        not r["ok"] and r.get("score") is None for r in results if "ok" in r
+    )
+    score = (
+        None
+        if unscored_failure
+        else next(
+            (r["score"] for r in reversed(results) if r.get("score") is not None),
+            None,
+        )
     )
     threshold = (grader.get("scoring") or {}).get("pass_threshold")
     if halted or not all(r["ok"] for r in results if "ok" in r):
