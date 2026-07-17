@@ -304,7 +304,6 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
     (grade_dir / "grader.yaml").write_text(grader_path.read_text())
     # Older run.yaml files recorded just the task name, newer the full task
     task = load_yaml(run_dir / "run.yaml").get("task")
-    task_name = task.get("name") if isinstance(task, dict) else task
     results = []
     halted = False
     for check in grader["checks"]:
@@ -316,7 +315,7 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
             ok, info = BUILTIN_CHECKERS[name](check, run_dir, grade_dir)
         else:
             ok, info = execute_checker_program(
-                check, run_dir, grade_dir, grader_path.parent, task_name
+                check, run_dir, grade_dir, grader_path.parent, task
             )
         info = normalize_check_info(info)
         if ok and check.get("creates") and not (grade_dir / check["creates"]).exists():
@@ -352,13 +351,13 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
     return record
 
 
-def execute_checker_program(check, run_dir, grade_dir, grader_dir, task_name):
+def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     "Run a CLI Checker, returning (ok, extra result fields)"
     checker = (grader_dir / check["checker"]).resolve()
     if not (checker.is_file() and os.access(checker, os.X_OK)):
         return False, {"notes": f"Checker {checker} is not an executable file"}
     # Absolute path: checkers run with cwd set to the grade workspace.
-    # Scalar check config keys become individual env vars, for shell scripts.
+    # Scalar check and task keys become individual env vars, for shell scripts.
     env = (
         os.environ
         | scalar_env_vars("SMEVAL_CHECK_", check)
@@ -367,6 +366,9 @@ def execute_checker_program(check, run_dir, grade_dir, grader_dir, task_name):
             "SMEVAL_CHECK": json.dumps(check),
         }
     )
+    if isinstance(task, dict):
+        env |= scalar_env_vars("SMEVAL_TASK_", task)
+    task_name = task.get("name") if isinstance(task, dict) else task
     if task_name:
         env["SMEVAL_TASK"] = task_name
     result = subprocess.run(
@@ -410,6 +412,72 @@ BUILTIN_CHECKERS = {
     "contains": check_contains,
     "xml-valid": check_xml_valid,
 }
+
+
+def resolve_eval_slugs(eval_paths):
+    "Map slug -> eval path, erroring on collisions"
+    evals = {}
+    for eval_path in eval_paths:
+        doc = load_eval(eval_path)
+        slug = slugify(doc.get("name") or eval_path.name)
+        if slug in evals:
+            raise click.ClickException(
+                f"Duplicate eval slug {slug!r}: {evals[slug]} and {eval_path}"
+            )
+        evals[slug] = eval_path
+    return evals
+
+
+@cli.command()
+@click.argument(
+    "eval_paths",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option(
+    "-g", "--grader", "grader_name", default="default", show_default=True
+)
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("-p", "--port", default=7001, show_default=True)
+def serve(eval_paths, grader_name, host, port):
+    "Serve a live HTML report over one or more Evals"
+    from . import site
+
+    evals = resolve_eval_slugs(eval_paths)
+    click.echo(f"Serving {len(evals)} eval(s) on http://{host}:{port}")
+    site.run_server(evals, grader_name, host, port)
+
+
+@cli.command()
+@click.argument(
+    "eval_paths",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option(
+    "-g", "--grader", "grader_name", default="default", show_default=True
+)
+@click.option(
+    "-o",
+    "--output",
+    "site_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=Path("build"),
+    show_default=True,
+    help="Site directory to build into (adds to an existing site)",
+)
+def build(eval_paths, grader_name, site_dir):
+    "Build (or add to) a static HTML report site"
+    from . import site
+
+    evals = resolve_eval_slugs(eval_paths)
+    site_dir.mkdir(parents=True, exist_ok=True)
+    for slug, eval_path in evals.items():
+        slug, count = site.build_eval(eval_path, site_dir, grader_name, slug)
+        click.echo(f"{slug}: {count} runs -> {site_dir / 'evals' / slug}")
+    click.echo(f"Site: {site_dir / 'index.html'}")
 
 
 @cli.command()
