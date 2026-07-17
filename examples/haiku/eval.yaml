@@ -1,0 +1,5 @@
+name: haiku
+description: >-
+  Can the model write a haiku on demand? Graded purely on structure -
+  the reply must be exactly three lines. Cheap and fast by design: no
+  LLM judge, so grading is free and runs cost almost nothing.

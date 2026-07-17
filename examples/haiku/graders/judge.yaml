@@ -1,0 +1,25 @@
+name: judge
+checks:
+  # Structure gate first - a non-haiku is not worth judging
+  - checker: ../checkers/haiku-structure
+    required: true
+
+  # Then quality, judged by a language model
+  - checker: ../checkers/llm-judge
+    model: openai-codex/gpt-5.6-terra
+    tags:
+      - nature_imagery
+      - seasonal_reference
+      - correct_syllable_structure
+      - surprising_turn
+      - cliche
+      - mentions_the_topic
+    rubric: >-
+      Score this haiku from 0 to 10. Award up to 4 points for vivid,
+      concrete imagery; up to 3 points for following the 5-7-5 syllable
+      structure; and up to 3 points for overall effect - a haiku that
+      lands a surprising or resonant final line deserves them. Apply
+      every tag from the allowed list that is true of the haiku.
+
+scoring:
+  pass_threshold: 0.5
