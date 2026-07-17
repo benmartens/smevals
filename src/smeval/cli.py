@@ -1,7 +1,10 @@
+import hashlib
 import json
+import math
 import os
 import re
 import shutil
+import statistics
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -407,3 +410,219 @@ BUILTIN_CHECKERS = {
     "contains": check_contains,
     "xml-valid": check_xml_valid,
 }
+
+
+@cli.command()
+@click.argument(
+    "eval_path", type=click.Path(exists=True, file_okay=False, path_type=Path)
+)
+@click.option(
+    "-g",
+    "--grader",
+    "grader_name",
+    default="default",
+    show_default=True,
+    help="Report on Grades produced by this grader",
+)
+@click.option("--by-task", is_flag=True, help="Include per-task scores in model blocks")
+@click.option("as_json", "--json", is_flag=True, help="Emit raw grade rows as JSON")
+@runs_dir_option
+def report(eval_path, grader_name, by_task, as_json, runs_dir):
+    "Aggregate an Eval's Grades into a markdown report"
+    eval_doc = load_eval(eval_path)
+    runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
+
+    grader_path = eval_path / "graders" / f"{grader_name}.yaml"
+    if not grader_path.exists():
+        available = sorted(p.stem for p in (eval_path / "graders").glob("*.yaml"))
+        raise click.ClickException(
+            f"No grader named {grader_name!r} - available graders: "
+            + (", ".join(available) or "(none)")
+        )
+    grader = load_yaml(grader_path)
+    grader_version = hashlib.sha256(grader_path.read_bytes()).hexdigest()[:7]
+
+    rows, ungraded, stale = collect_grade_rows(runs_root, grader_name, grader)
+    if not rows:
+        raise click.ClickException(
+            f"No grades from grader {grader_name!r} found in {runs_root}"
+        )
+    if as_json:
+        click.echo(
+            json.dumps(
+                {
+                    "eval": eval_doc.get("name") or eval_path.name,
+                    "grader": grader_name,
+                    "grader_version": grader_version,
+                    "rows": rows,
+                },
+                indent=2,
+            )
+        )
+        return
+
+    fails = sum(row["outcome"] != "pass" for row in rows)
+    lines = [
+        f"# {eval_doc.get('name') or eval_path.name}",
+        "",
+        f"- Grader: {grader_name} (version {grader_version})",
+        f"- Graded: {len(rows)} runs ({fails} failed, {ungraded} ungraded)",
+        f"- Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
+    ]
+    if stale:
+        lines.append(
+            f"- ⚠ {stale} of {len(rows)} grades came from an older version "
+            f"of grader {grader_name!r} - consider --regrade"
+        )
+    lines += render_leaderboard(rows)
+    lines += render_tag_shares(rows)
+    lines += render_model_blocks(rows, by_task)
+    click.echo("\n".join(lines))
+
+
+def collect_grade_rows(runs_root, grader_name, grader):
+    "One row per Grade, plus counts of ungraded runs and stale grades"
+    rows = []
+    ungraded = stale = 0
+    for run_file in sorted(runs_root.rglob("run.yaml")):
+        run_dir = run_file.parent
+        grade_file = run_dir / "grades" / grader_name / "grade.yaml"
+        if not grade_file.exists():
+            ungraded += 1
+            continue
+        stale += not grade_matches_grader(grade_file.parent, grader)
+        run = load_yaml(run_file)
+        grade = load_yaml(grade_file)
+        task = run.get("task")
+        metrics = {}
+        for check in grade.get("checks", []):
+            metrics.update(check.get("metrics") or {})
+        rows.append(
+            {
+                "task": task.get("name") if isinstance(task, dict) else task,
+                "config": run.get("config", {}).get("name"),
+                "model": run.get("config", {}).get("model"),
+                "outcome": grade.get("outcome"),
+                "score": grade.get("score"),
+                "tags": grade.get("tags") or [],
+                "metrics": metrics,
+                "run_dir": str(run_dir),
+            }
+        )
+    return rows, ungraded, stale
+
+
+def mean_stderr(values):
+    mean = sum(values) / len(values)
+    if len(values) > 1:
+        stderr = statistics.stdev(values) / math.sqrt(len(values))
+        return f"{mean:.2f} ±{stderr:.2f}"
+    return f"{mean:.2f}"
+
+
+def group_rows(rows):
+    "Group rows by (config, model), preserving a stable order"
+    groups = {}
+    for row in rows:
+        groups.setdefault((row["config"], row["model"]), []).append(row)
+    return groups
+
+
+def group_summary(group):
+    scores = [r["score"] for r in group if r["score"] is not None]
+    fails = sum(r["outcome"] != "pass" for r in group)
+    counts = f"{len(group)} run{'s' if len(group) != 1 else ''}"
+    if fails:
+        counts += f", {fails} fail{'s' if fails != 1 else ''}"
+    return scores, counts
+
+
+def render_leaderboard(rows):
+    entries = []
+    for (config, model), group in group_rows(rows).items():
+        scores, counts = group_summary(group)
+        display = mean_stderr(scores) if scores else "-"
+        sort_key = sum(scores) / len(scores) if scores else -1
+        entries.append((sort_key, display, model, config, counts))
+    entries.sort(key=lambda e: (-e[0], e[2]))
+
+    score_width = max(len(e[1]) for e in entries)
+    model_width = max(len(e[2]) for e in entries)
+    rank_width = len(str(len(entries)))
+    lines = ["", "## Leaderboard", ""]
+    rank = 0
+    previous_display = None
+    for position, (_, display, model, config, counts) in enumerate(entries, 1):
+        # Standard competition ranking: tied displayed scores share a rank
+        if display != previous_display:
+            rank = position
+            previous_display = display
+        lines.append(
+            f"{rank:>{rank_width}}. {display:<{score_width}}  {model:<{model_width}}"
+            f"  ({config}, {counts})"
+        )
+    return lines
+
+
+def render_tag_shares(rows):
+    counts = {}
+    for row in rows:
+        for tag in row["tags"]:
+            counts[tag] = counts.get(tag, 0) + 1
+    if not counts:
+        return []
+    total = len(rows)
+    width = len(str(total))
+    lines = ["", "## Tags", ""]
+    for tag, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+        share = f"({count / total:.0%})"
+        lines.append(f"- {count:>{width}}/{total} {share:>6}  {tag}")
+    return lines
+
+
+def render_model_blocks(rows, by_task):
+    lines = []
+    for (config, model), group in sorted(
+        group_rows(rows).items(),
+        key=lambda item: -(
+            lambda s: sum(s) / len(s) if s else -1
+        )([r["score"] for r in item[1] if r["score"] is not None]),
+    ):
+        scores, counts = group_summary(group)
+        lines += ["", f"## {model} ({config})", ""]
+        score_display = mean_stderr(scores) if scores else "-"
+        lines.append(f"- score: {score_display} over {counts}")
+        for key in sorted({k for r in group for k in r["metrics"]}):
+            values = [r["metrics"][key] for r in group if key in r["metrics"]]
+            if all(isinstance(v, bool) for v in values):
+                display = f"{sum(values) / len(values):.0%}"
+            else:
+                display = mean_stderr([float(v) for v in values])
+            lines.append(f"- {key}: {display}")
+        tag_counts = {}
+        for row in group:
+            for tag in row["tags"]:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        if tag_counts:
+            if len(group) == 1:
+                rendered = ", ".join(sorted(tag_counts))
+            else:
+                rendered = ", ".join(
+                    f"{tag} {count / len(group):.0%}"
+                    for tag, count in sorted(
+                        tag_counts.items(), key=lambda item: (-item[1], item[0])
+                    )
+                )
+            lines.append(f"- tags: {rendered}")
+        if by_task:
+            tasks = {}
+            for row in group:
+                tasks.setdefault(row["task"], []).append(row)
+            lines.append("- scores by task:")
+            for task_name in sorted(tasks):
+                task_scores = [
+                    r["score"] for r in tasks[task_name] if r["score"] is not None
+                ]
+                display = mean_stderr(task_scores) if task_scores else "-"
+                lines.append(f"  - {task_name}: {display}")
+    return lines
