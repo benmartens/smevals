@@ -446,17 +446,39 @@ BUILTIN_CHECKERS = {
 }
 
 
+def discover_evals(path):
+    """Yield Eval directories under path.
+
+    A directory containing eval.yaml is an Eval; any other directory is
+    treated as a Suite and searched recursively. Descent stops at each
+    Eval, so runs/ trees are never scanned.
+    """
+    if (path / "eval.yaml").exists():
+        yield path
+        return
+    for child in sorted(path.iterdir()):
+        if child.is_dir() and not child.name.startswith("."):
+            yield from discover_evals(child)
+
+
 def resolve_eval_slugs(eval_paths):
-    "Map slug -> eval path, erroring on collisions"
+    "Map slug -> eval path, discovering Evals inside Suite dirs"
     evals = {}
     for eval_path in eval_paths:
-        doc = load_eval(eval_path)
-        slug = slugify(doc.get("name") or eval_path.name)
-        if slug in evals:
+        found = list(discover_evals(eval_path))
+        if not found:
             raise click.ClickException(
-                f"Duplicate eval slug {slug!r}: {evals[slug]} and {eval_path}"
+                f"No Evals found in {eval_path} - an Eval directory "
+                "contains an eval.yaml file"
             )
-        evals[slug] = eval_path
+        for found_path in found:
+            doc = load_eval(found_path)
+            slug = slugify(doc.get("name") or found_path.name)
+            if slug in evals:
+                raise click.ClickException(
+                    f"Duplicate eval slug {slug!r}: {evals[slug]} and {found_path}"
+                )
+            evals[slug] = found_path
     return evals
 
 
