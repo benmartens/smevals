@@ -1,0 +1,11 @@
+name: pipes-and-commas
+csv: |-
+  product,price,note
+  "Widget | Deluxe",9.99,"Ships in 2, sometimes 3, days"
+  Gadget,12.50,Plain
+prompt: |-
+  Convert this CSV to a GitHub-flavored markdown table. Reply with only the table.
+
+  product,price,note
+  "Widget | Deluxe",9.99,"Ships in 2, sometimes 3, days"
+  Gadget,12.50,Plain

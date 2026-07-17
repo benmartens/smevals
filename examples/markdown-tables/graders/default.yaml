@@ -1,0 +1,8 @@
+name: default
+checks:
+  # Parses the emitted table and compares every cell against the
+  # task's CSV. Fails unless structure is valid and all cells match.
+  - checker: ../checkers/table-check
+    required: true
+scoring:
+  pass_threshold: 1.0

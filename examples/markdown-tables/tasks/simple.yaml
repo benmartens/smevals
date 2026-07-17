@@ -1,0 +1,11 @@
+name: simple
+csv: |-
+  name,age,city
+  Ann,34,Oslo
+  Bo,55,Lima
+prompt: |-
+  Convert this CSV to a GitHub-flavored markdown table. Reply with only the table.
+
+  name,age,city
+  Ann,34,Oslo
+  Bo,55,Lima

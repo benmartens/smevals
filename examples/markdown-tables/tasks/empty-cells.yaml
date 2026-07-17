@@ -1,0 +1,13 @@
+name: empty-cells
+csv: |-
+  region,q1,q2,q3
+  North,1200,,900
+  South,800,850,1100
+  West,430,510,
+prompt: |-
+  Convert this CSV to a GitHub-flavored markdown table. Reply with only the table.
+
+  region,q1,q2,q3
+  North,1200,,900
+  South,800,850,1100
+  West,430,510,

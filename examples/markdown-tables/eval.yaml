@@ -1,0 +1,7 @@
+name: markdown-tables
+description: >-
+  Produce well-formed GitHub-flavored markdown tables from CSV input.
+  Graded deterministically: the emitted table is parsed and every cell
+  compared against the CSV, so structure and content are both checked
+  without an LLM judge. Tasks cover quoted commas, literal pipes that
+  need escaping, and empty cells.

@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""Deterministic markdown-table checker.
+
+Parses the markdown table out of the Run's output, parses the task's
+CSV (from $SMEVAL_TASK_CSV) with the csv module, and compares cell by
+cell. Structure problems and content mismatches are reported through
+metrics and tags; the score is the fraction of expected cells that
+appear correctly.
+"""
+import csv
+import io
+import json
+import os
+import pathlib
+import re
+import sys
+
+expected = [
+    row
+    for row in csv.reader(io.StringIO(os.environ["SMEVAL_TASK_CSV"]))
+    if row
+]
+raw = (pathlib.Path(os.environ["SMEVAL_RUN_DIR"]) / "output.txt").read_text()
+
+lines = [line for line in raw.strip().splitlines()]
+table_lines = [
+    line for line in lines if "|" in line and not line.strip().startswith("```")
+]
+prose_lines = [
+    line
+    for line in lines
+    if line.strip()
+    and "|" not in line
+    and not line.strip().startswith("```")
+]
+
+tags = []
+if prose_lines:
+    tags.append("prose_around_table")
+
+if not table_lines:
+    print(json.dumps({"score": 0.0, "tags": ["no_table_found"] + tags}))
+    sys.exit(1)
+
+
+def parse_row(line):
+    line = line.strip()
+    if line.startswith("|"):
+        line = line[1:]
+    if line.endswith("|"):
+        line = line[:-1]
+    cells = re.split(r"(?<!\\)\|", line)
+    # Unescape the two accepted pipe encodings
+    return [c.strip().replace("\\|", "|").replace("&#124;", "|") for c in cells]
+
+
+rows = [parse_row(line) for line in table_lines]
+
+separator_ok = len(rows) >= 2 and all(
+    re.fullmatch(r":?-+:?", cell) for cell in rows[1]
+)
+if not separator_ok:
+    tags.append("missing_separator")
+data = [rows[0]] + rows[2:] if separator_ok else rows
+
+widths = {len(row) for row in rows if not separator_ok or row is not rows[1]}
+if len({len(row) for row in data}) > 1:
+    tags.append("ragged_rows")
+if len(data) != len(expected):
+    tags.append("wrong_row_count")
+
+total = sum(len(row) for row in expected)
+matched = 0
+for expected_row, got_row in zip(expected, data):
+    for expected_cell, got_cell in zip(expected_row, got_row):
+        matched += expected_cell.strip() == got_cell
+accuracy = matched / total if total else 0.0
+
+structure_valid = (
+    separator_ok and "ragged_rows" not in tags and "wrong_row_count" not in tags
+)
+perfect = structure_valid and matched == total
+print(
+    json.dumps(
+        {
+            "score": round(accuracy, 3),
+            "metrics": {
+                "structure_valid": structure_valid,
+                "cell_accuracy": round(accuracy, 3),
+            },
+            "tags": tags,
+            "notes": f"{matched}/{total} cells correct",
+        }
+    )
+)
+sys.exit(0 if perfect else 1)
