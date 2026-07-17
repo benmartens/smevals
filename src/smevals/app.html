@@ -72,7 +72,10 @@
   .fresh { animation: flash 2s; }
   @keyframes flash { from { background: #fff9c4; } to { background: none; } }
   .tag-row { display: flex; gap: 8px; font-size: 13px; padding: 3px 0;
-             align-items: baseline; font-variant-numeric: tabular-nums; }
+             align-items: baseline; font-variant-numeric: tabular-nums;
+             color: inherit; text-decoration: none; }
+  a.tag-row:hover { background: #f8fafc; }
+  a.tag-row .tag-name { color: #2c6cb0; text-decoration: underline; }
   .tag-row .share { width: 90px; color: #5a6b7b; flex-shrink: 0;
                     text-align: right; }
   .tag { background: #eef3f8; border-radius: 4px; padding: 1px 7px;
@@ -255,7 +258,7 @@ function leaderboardHTML(slug, groups) {
     </a>`).join("");
 }
 
-function tagsHTML(rows, grader) {
+function tagsHTML(slug, rows, grader) {
   const counts = {};
   let graded = 0;
   for (const r of rows) {
@@ -267,10 +270,10 @@ function tagsHTML(rows, grader) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   if (!entries.length) return "";
   return `<section><h2>Tags</h2>` + entries.map(([tag, n]) => `
-    <div class="tag-row">
+    <a class="tag-row" href="#/${enc(slug)}/tag/${enc(tag)}">
       <span class="share">${n}/${graded} (${Math.round(n / graded * 100)}%)</span>
-      <span>${esc(tag)}</span>
-    </div>`).join("") + `</section>`;
+      <span class="tag-name">${esc(tag)}</span>
+    </a>`).join("") + `</section>`;
 }
 
 function checksHTML(grader) {
@@ -375,7 +378,7 @@ function renderEval(slug) {
     <div class="grid">
       <div>
         <section><h2>Leaderboard</h2>${leaderboardHTML(slug, groups)}</section>
-        ${tagsHTML(rows, grader)}
+        ${tagsHTML(slug, rows, grader)}
         <section><h2>What was tested</h2>${
           info.tasks.map(t => `
             <div class="task-item"><b>${esc(t.name)}</b>${t.prompt
@@ -397,6 +400,40 @@ function renderEval(slug) {
 function bindGraderPicker(slug) {
   document.querySelectorAll(".picker a").forEach(a =>
     a.addEventListener("click", () => selectGrader(slug, a.dataset.grader)));
+}
+
+function renderTag(slug, tag) {
+  const data = state.data[slug];
+  const grader = currentGrader(slug);
+  const graded = data.rows.filter(r => gradeOf(r, grader).graded);
+  const matches = graded.filter(r =>
+    (gradeOf(r, grader).tags || []).includes(tag));
+  matches.sort((a, b) =>
+    (gradeOf(b, grader).score ?? -1) - (gradeOf(a, grader).score ?? -1));
+  const item = r => {
+    const grade = gradeOf(r, grader);
+    return `
+    <a class="feed-item" href="#/${enc(slug)}/run/${r.run}">
+      <span class="when">${ago(grade.graded)}</span>
+      <span class="what">${esc(r.task)} · ${esc(r.model)} (${esc(r.config)})</span>
+      <span class="${grade.outcome === "pass" ? "ok" : "fail"}">${
+        grade.score != null ? grade.score.toFixed(2) : esc(grade.outcome ?? "")}</span>
+    </a>`;
+  };
+  document.getElementById("view").innerHTML = `
+    <div class="crumb"><a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a>
+      / tag: ${esc(tag)}</div>
+    <section>
+      <h2>${esc(tag)}</h2>
+      <div class="facts" style="margin-bottom:10px">
+        <span><b>${matches.length}</b> of <b>${graded.length}</b>
+          graded runs</span>
+        <span>grader: <b>${esc(grader)}</b></span>
+      </div>
+      ${matches.map(item).join("") ||
+        `<div class="empty">No graded runs carry this tag.</div>`}
+    </section>
+    ${galleryHTML(slug, matches, grader, 0)}`;
 }
 
 function renderGallery(slug) {
@@ -482,7 +519,8 @@ function gradeSectionHTML(slug, row, name, grade) {
         ${check.notes ? `<div class="conf">${esc(check.notes)}</div>` : ""}
         ${Object.entries(check.metrics || {}).map(([k, v]) =>
           `<div class="conf">${esc(k)}: ${esc(String(v))}</div>`).join("")}
-        ${(check.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
+        ${(check.tags || []).map(t =>
+          `<a class="tag" href="#/${enc(slug)}/tag/${enc(t)}">${esc(t)}</a>`).join("")}
       </div>`).join("") || `<div class="empty">No checks recorded.</div>`}
   </section>`;
 }
@@ -622,6 +660,9 @@ async function route() {
                        decodeURIComponent(rest[1] ?? ""));
   }
   if (section === "gallery") return renderGallery(slug);
+  if (section === "tag") {
+    return renderTag(slug, decodeURIComponent(rest[0] ?? ""));
+  }
   return renderEval(slug);
 }
 
