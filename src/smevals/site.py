@@ -169,7 +169,14 @@ def run_server(evals, grader_name, host, port):
                 runs_root = (eval_path / "runs").resolve()
                 target = (eval_path / tail).resolve()
                 if str(target).startswith(str(runs_root)) and target.is_file():
-                    ctype = mimetypes.guess_type(target.name)[0] or "text/plain"
+                    # YAML and unknown types render inline, not download
+                    if target.suffix in (".yaml", ".yml"):
+                        ctype = "text/plain; charset=utf-8"
+                    else:
+                        ctype = (
+                            mimetypes.guess_type(target.name)[0]
+                            or "text/plain; charset=utf-8"
+                        )
                     return self.reply(200, target.read_bytes(), ctype)
             self.reply(404, b"not found", "text/plain")
 
