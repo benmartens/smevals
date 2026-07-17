@@ -502,9 +502,7 @@ def resolve_eval_slugs(eval_paths):
     required=True,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
 )
-@click.option(
-    "-g", "--grader", "grader_name", default="default", show_default=True
-)
+@click.option("-g", "--grader", "grader_name", default="default", show_default=True)
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("-p", "--port", default=7001, show_default=True)
 def serve(eval_paths, grader_name, host, port):
@@ -523,9 +521,7 @@ def serve(eval_paths, grader_name, host, port):
     required=True,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
 )
-@click.option(
-    "-g", "--grader", "grader_name", default="default", show_default=True
-)
+@click.option("-g", "--grader", "grader_name", default="default", show_default=True)
 @click.option(
     "-o",
     "--output",
@@ -712,9 +708,9 @@ def render_model_blocks(rows, by_task):
     lines = []
     for (config, model), group in sorted(
         group_rows(rows).items(),
-        key=lambda item: -(
-            lambda s: sum(s) / len(s) if s else -1
-        )([r["score"] for r in item[1] if r["score"] is not None]),
+        key=lambda item: -(lambda s: sum(s) / len(s) if s else -1)(
+            [r["score"] for r in item[1] if r["score"] is not None]
+        ),
     ):
         scores, counts = group_summary(group)
         lines += ["", f"## {model} ({config})", ""]

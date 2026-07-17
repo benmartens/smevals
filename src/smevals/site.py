@@ -68,9 +68,7 @@ def collect_eval(eval_path, grader_name):
                 "duration": run.get("duration_seconds"),
                 "exit_code": run.get("exit_code"),
                 "imported_from": run.get("imported_from"),
-                "files": sorted(
-                    p.name for p in run_dir.iterdir() if p.is_file()
-                ),
+                "files": sorted(p.name for p in run_dir.iterdir() if p.is_file()),
             }
             grade_file = run_dir / "grades" / grader_name / "grade.yaml"
             if grade_file.exists():
@@ -171,9 +169,7 @@ def run_server(evals, grader_name, host, port):
                 runs_root = (eval_path / "runs").resolve()
                 target = (eval_path / tail).resolve()
                 if str(target).startswith(str(runs_root)) and target.is_file():
-                    ctype = (
-                        mimetypes.guess_type(target.name)[0] or "text/plain"
-                    )
+                    ctype = mimetypes.guess_type(target.name)[0] or "text/plain"
                     return self.reply(200, target.read_bytes(), ctype)
             self.reply(404, b"not found", "text/plain")
 
