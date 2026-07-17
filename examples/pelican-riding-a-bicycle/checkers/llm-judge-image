@@ -1,19 +1,71 @@
-#!/usr/bin/env bash
-# Scores $SMEVAL_CHECK_IMAGE against $SMEVAL_CHECK_RUBRIC using a vision
-# model. The --schema forces {score, notes} JSON, which is exactly the
-# check result format smeval expects on stdout. Full JSON schema with
-# additionalProperties false - required by OpenAI strict structured output.
-set -euo pipefail
+#!/usr/bin/env python3
+"""Scores $SMEVAL_CHECK_IMAGE against $SMEVAL_CHECK_RUBRIC with a vision
+model, via llm. The judge scores 0-10 (natural for rubrics) and offers
+descriptive tags; this checker normalizes to the check result contract:
+score 0.0-1.0, tags, notes, details. Full JSON schema with
+additionalProperties false - required by OpenAI strict structured output.
+"""
+import json
+import os
+import subprocess
+import sys
 
-llm -m "$SMEVAL_CHECK_MODEL" -a "$SMEVAL_CHECK_IMAGE" \
-  --schema '{
+# A tags list in the Check config becomes a controlled vocabulary,
+# enforced by the schema itself; without one the judge tags freely.
+allowed_tags = json.loads(os.environ["SMEVAL_CHECK"]).get("tags")
+if allowed_tags:
+    tag_items = {"type": "string", "enum": allowed_tags}
+    tag_description = "every tag from the allowed list that is true of the image"
+else:
+    tag_items = {"type": "string"}
+    tag_description = "short snake_case tags for notable properties of the image"
+
+SCHEMA = {
     "type": "object",
     "properties": {
-      "score": {"type": "integer", "description": "the score"},
-      "notes": {"type": "string", "description": "short explanation of the scoring"}
+        "score": {"type": "integer", "description": "the score, 0 to 10"},
+        "notes": {
+            "type": "string",
+            "description": "short explanation of the scoring",
+        },
+        "tags": {
+            "type": "array",
+            "items": tag_items,
+            "description": tag_description,
+        },
     },
-    "required": ["score", "notes"],
-    "additionalProperties": false
-  }' \
-  "$SMEVAL_CHECK_RUBRIC"
-llm logs -c --json > judge-log.json
+    "required": ["score", "notes", "tags"],
+    "additionalProperties": False,
+}
+
+result = subprocess.run(
+    [
+        "llm",
+        "-m",
+        os.environ["SMEVAL_CHECK_MODEL"],
+        "-a",
+        os.environ["SMEVAL_CHECK_IMAGE"],
+        "--schema",
+        json.dumps(SCHEMA),
+        os.environ["SMEVAL_CHECK_RUBRIC"],
+    ],
+    capture_output=True,
+    text=True,
+)
+if result.returncode != 0:
+    sys.exit(result.stderr.strip() or "llm call failed")
+judged = json.loads(result.stdout)
+
+with open("judge-log.json", "w") as fp:
+    subprocess.run(["llm", "logs", "-c", "--json"], stdout=fp, check=True)
+
+print(
+    json.dumps(
+        {
+            "score": judged["score"] / 10,
+            "tags": judged["tags"],
+            "notes": judged["notes"],
+            "details": {"raw_score": judged["score"]},
+        }
+    )
+)

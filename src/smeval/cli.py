@@ -57,6 +57,38 @@ def scalar_env_vars(prefix, mapping):
     }
 
 
+def normalize_tag(tag):
+    return re.sub(r"[^a-z0-9]+", "_", str(tag).lower()).strip("_")
+
+
+def normalize_check_info(info):
+    """Apply the check result contract to checker-emitted fields.
+
+    Checkers own five keys: score (float 0-1), metrics (dict of
+    name -> number|bool), tags (list of slugs), notes (str), details
+    (dict). Anything else is folded into details rather than trusted
+    at the top level, so core-owned keys can never be clobbered.
+    """
+    out = {}
+    if info.get("score") is not None:
+        out["score"] = float(info["score"])
+    if isinstance(info.get("metrics"), dict):
+        out["metrics"] = info["metrics"]
+    if isinstance(info.get("tags"), list):
+        out["tags"] = sorted({normalize_tag(t) for t in info["tags"] if str(t).strip()})
+    if info.get("notes"):
+        out["notes"] = str(info["notes"])
+    details = info.get("details") if isinstance(info.get("details"), dict) else {}
+    extras = {
+        key: value
+        for key, value in info.items()
+        if key not in ("score", "metrics", "tags", "notes", "details")
+    }
+    if details or extras:
+        out["details"] = details | extras
+    return out
+
+
 @cli.command()
 @click.argument(
     "eval_path", type=click.Path(exists=True, file_okay=False, path_type=Path)
@@ -283,10 +315,12 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
             ok, info = execute_checker_program(
                 check, run_dir, grade_dir, grader_path.parent, task_name
             )
+        info = normalize_check_info(info)
         if ok and check.get("creates") and not (grade_dir / check["creates"]).exists():
             ok = False
             info["notes"] = f"did not create promised file {check['creates']}"
-        results.append({"checker": name, "ok": ok, **info})
+        # normalize_check_info guarantees info can't clobber core keys
+        results.append({"checker": name, "ok": ok} | info)
         if not ok and check.get("required"):
             halted = True
 
@@ -307,6 +341,8 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
         "graded": datetime.now(timezone.utc).isoformat(),
         "outcome": outcome,
         "score": score,
+        # Union of every check's tags, for cheap filtering and faceting
+        "tags": sorted({t for r in results for t in r.get("tags", [])}),
         "checks": results,
     }
     (grade_dir / "grade.yaml").write_text(yaml.safe_dump(record, sort_keys=False))

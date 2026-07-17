@@ -18,10 +18,23 @@ checks:
     creates: render.png
     required: true
 
-  # Score the rendered image with a vision model
+  # Score the rendered image with a vision model. The judge applies
+  # every tag from this controlled vocabulary that is true of the image.
   - checker: ../checkers/llm-judge-image
     image: render.png
     model: openai-codex/gpt-5.6-sol
+    tags:
+      - recognizable_pelican
+      - recognizable_bicycle
+      - pelican_riding_bicycle
+      - feet_on_pedals
+      - wings_on_handlebars
+      - correct_bicycle_frame_shape
+      - facing_right_to_left
+      - facing_left_to_right
+      - wearing_a_hat
+      - no_pelican_visible
+      - no_bicycle_visible
     rubric: >-
       Score this image from 0 to 10. Award up to 3 points for containing
       a recognizable pelican, up to 3 points for a recognizable bicycle,
@@ -30,5 +43,6 @@ checks:
 
 scoring:
   # The Grade fails if any required Check fails; otherwise the
-  # score from the final Check decides pass/fail
-  pass_threshold: 5
+  # score from the final Check decides pass/fail. Scores are
+  # normalized 0.0-1.0 per the check result contract.
+  pass_threshold: 0.5

@@ -27,3 +27,15 @@ A **Checker** is a named operation *or* a reusable CLI program that implements o
 A **Grade** is the result of applying a Grader to a Run. It records the result of each Check and may contain an overall pass/fail outcome and/or a numeric score. Grades can also include additional notes which are not used for scoring but may help interpret the results in the future.
 
 We may later change the Grader we use to evaluate Runs without executing the Runs again. A single Run can therefore be evaluated multiple times, producing multiple Grades using different Graders.
+
+## Check results
+
+A Checker signals pass or fail with its exit code. It can also emit a JSON object on standard output with up to five keys, which are recorded in the Grade:
+
+- **score** - a float from 0.0 to 1.0. The last score produced by any Check becomes the Grade's overall score, compared against the Grader's `pass_threshold`.
+- **metrics** - an object mapping names to numbers or booleans, e.g. `{"precision": 0.9, "status_correct": true}`. These are measurements for reports to aggregate: numbers as mean ± stderr, booleans as rates.
+- **tags** - a list of short descriptive labels, e.g. `["wearing_a_hat", "correct_bicycle_frame_shape"]`. Tags are open vocabulary and presence-only - an absent tag means “not observed”, not “false”. They are normalized to lowercase snake_case, and the Grade records the union of all its Checks' tags. Reports aggregate them as counts and shares, and they support filtering and faceting when exploring results.
+- **notes** - a human-readable string explaining the result. Never aggregated.
+- **details** - an object of structured diagnostics, such as predicted-versus-expected lists. Kept with the Grade but ignored by aggregation.
+
+Any other keys are folded into **details**.
