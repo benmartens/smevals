@@ -48,6 +48,15 @@ runs_dir_option = click.option(
 )
 
 
+def scalar_env_vars(prefix, mapping):
+    "Scalar mapping values as env vars, e.g. submission -> SMEVAL_TASK_SUBMISSION"
+    return {
+        prefix + re.sub(r"[^A-Za-z0-9]+", "_", key).upper(): str(value)
+        for key, value in mapping.items()
+        if isinstance(value, (str, int, float, bool))
+    }
+
+
 @cli.command()
 @click.argument(
     "eval_path", type=click.Path(exists=True, file_okay=False, path_type=Path)
@@ -67,8 +76,15 @@ runs_dir_option = click.option(
     show_default=True,
     help="Name of the config to use",
 )
+@click.option(
+    "tasks",
+    "-t",
+    "--task",
+    multiple=True,
+    help="Task(s) to run, defaults to every task in the eval",
+)
 @runs_dir_option
-def run(eval_path, models, config_name, runs_dir):
+def run(eval_path, models, config_name, tasks, runs_dir):
     "Execute the Tasks in an Eval, recording each Run"
     eval_doc = load_eval(eval_path)
     runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
@@ -87,6 +103,15 @@ def run(eval_path, models, config_name, runs_dir):
         raise click.ClickException(f"Runner {runner} is not an executable file")
 
     task_files = sorted((eval_path / "tasks").glob("*.yaml"))
+    if tasks:
+        available = {p.stem: p for p in task_files}
+        missing = [t for t in tasks if t not in available]
+        if missing:
+            raise click.ClickException(
+                f"No such task(s): {', '.join(missing)} - available tasks: "
+                + ", ".join(sorted(available))
+            )
+        task_files = [available[t] for t in tasks]
     if not task_files:
         raise click.ClickException(f"No tasks found in {eval_path / 'tasks'}")
 
@@ -115,12 +140,18 @@ def execute_run(runs_root, task, config_name, runner, model):
     run_dir.mkdir(parents=True)
 
     click.echo(f"{task['name']} / {config_name} / {model} ... ", nl=False)
-    env = os.environ | {
-        "SMEVAL_MODEL": model,
-        "SMEVAL_PROMPT": task["prompt"],
-        "SMEVAL_TASK": task["name"],
-        "SMEVAL_RUN_DIR": str(run_dir.resolve()),
-    }
+    env = (
+        os.environ
+        | scalar_env_vars("SMEVAL_TASK_", task)
+        | {
+            "SMEVAL_MODEL": model,
+            "SMEVAL_TASK": task["name"],
+            "SMEVAL_RUN_DIR": str(run_dir.resolve()),
+        }
+    )
+    # Not every Task is a single prompt - some carry other data instead
+    if "prompt" in task:
+        env["SMEVAL_PROMPT"] = task["prompt"]
     t0 = time.monotonic()
     result = subprocess.run(
         [str(runner)], cwd=run_dir, env=env, capture_output=True, text=True
@@ -130,10 +161,10 @@ def execute_run(runs_root, task, config_name, runner, model):
     (run_dir / "output.txt").write_text(result.stdout)
     if result.stderr:
         (run_dir / "stderr.txt").write_text(result.stderr)
-    # run.yaml is written last: its presence marks a complete Run
+    # run.yaml is written last: its presence marks a complete Run.
+    # The full task is embedded so the Run stays self-describing.
     record = {
-        "task": task["name"],
-        "prompt": task["prompt"],
+        "task": task,
         "config": {
             "name": config_name,
             "runner": str(runner),
@@ -236,6 +267,9 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
     # Snapshot the grader spec so each Grade records exactly how it
     # was produced, even after the grader is later edited
     (grade_dir / "grader.yaml").write_text(grader_path.read_text())
+    # Older run.yaml files recorded just the task name, newer the full task
+    task = load_yaml(run_dir / "run.yaml").get("task")
+    task_name = task.get("name") if isinstance(task, dict) else task
     results = []
     halted = False
     for check in grader["checks"]:
@@ -247,7 +281,7 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
             ok, info = BUILTIN_CHECKERS[name](check, run_dir, grade_dir)
         else:
             ok, info = execute_checker_program(
-                check, run_dir, grade_dir, grader_path.parent
+                check, run_dir, grade_dir, grader_path.parent, task_name
             )
         if ok and check.get("creates") and not (grade_dir / check["creates"]).exists():
             ok = False
@@ -279,22 +313,23 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
     return record
 
 
-def execute_checker_program(check, run_dir, grade_dir, grader_dir):
+def execute_checker_program(check, run_dir, grade_dir, grader_dir, task_name):
     "Run a CLI Checker, returning (ok, extra result fields)"
     checker = (grader_dir / check["checker"]).resolve()
     if not (checker.is_file() and os.access(checker, os.X_OK)):
         return False, {"notes": f"Checker {checker} is not an executable file"}
-    # Absolute path: checkers run with cwd set to the grade workspace
-    env = os.environ | {
-        "SMEVAL_RUN_DIR": str(run_dir.resolve()),
-        "SMEVAL_CHECK": json.dumps(check),
-    }
-    # Scalar config keys also become individual env vars, for shell scripts
-    for key, value in check.items():
-        if isinstance(value, (str, int, float, bool)):
-            env["SMEVAL_CHECK_" + re.sub(r"[^A-Za-z0-9]+", "_", key).upper()] = str(
-                value
-            )
+    # Absolute path: checkers run with cwd set to the grade workspace.
+    # Scalar check config keys become individual env vars, for shell scripts.
+    env = (
+        os.environ
+        | scalar_env_vars("SMEVAL_CHECK_", check)
+        | {
+            "SMEVAL_RUN_DIR": str(run_dir.resolve()),
+            "SMEVAL_CHECK": json.dumps(check),
+        }
+    )
+    if task_name:
+        env["SMEVAL_TASK"] = task_name
     result = subprocess.run(
         [str(checker)], cwd=grade_dir, env=env, capture_output=True, text=True
     )
