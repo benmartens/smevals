@@ -36,6 +36,17 @@ def load_eval(eval_path):
     return load_yaml(eval_file)
 
 
+def load_grader(eval_path, grader_name):
+    grader_path = eval_path / "graders" / f"{grader_name}.yaml"
+    if not grader_path.exists():
+        available = sorted(p.stem for p in (eval_path / "graders").glob("*.yaml"))
+        raise click.ClickException(
+            f"No grader named {grader_name!r} - available graders: "
+            + (", ".join(available) or "(none)")
+        )
+    return grader_path, load_yaml(grader_path)
+
+
 def resolve_runs_root(eval_path, eval_doc, runs_dir):
     if runs_dir is None:
         return eval_path / "runs"
@@ -118,11 +129,26 @@ def normalize_check_info(info):
     multiple=True,
     help="Task(s) to run, defaults to every task in the eval",
 )
+@click.option(
+    "-g",
+    "--grader",
+    "grader_name",
+    is_flag=False,
+    flag_value="default",
+    default=None,
+    help="Grade each Run the moment it finishes; -g alone uses the "
+    "grader named 'default'",
+)
 @runs_dir_option
-def run(eval_path, models, config_name, tasks, runs_dir):
+def run(eval_path, models, config_name, tasks, grader_name, runs_dir):
     "Execute the Tasks in an Eval, recording each Run"
     eval_doc = load_eval(eval_path)
     runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
+
+    # Validate the grader before any model gets called
+    grader_path = grader = None
+    if grader_name:
+        grader_path, grader = load_grader(eval_path, grader_name)
 
     config_path = eval_path / "configs" / f"{config_name}.yaml"
     if not config_path.exists():
@@ -152,17 +178,30 @@ def run(eval_path, models, config_name, tasks, runs_dir):
 
     models = list(models) or [config["model"]]
 
-    failures = 0
+    failures = grade_failures = 0
     for task_file in task_files:
         task = load_yaml(task_file)
         for model in models:
-            failures += not execute_run(runs_root, task, config_name, runner, model)
+            ok, run_dir = execute_run(runs_root, task, config_name, runner, model)
+            failures += not ok
+            if grader:
+                grade_dir = run_dir / "grades" / grader_name
+                record = grade_run(run_dir, grade_dir, grader, grader_path)
+                grade_failures += record["outcome"] != "pass"
+                score = record["score"]
+                score_display = "" if score is None else f" score={score}"
+                click.echo(f"    grade: {record['outcome']}{score_display}")
+    problems = []
     if failures:
-        raise click.ClickException(f"{failures} run(s) failed")
+        problems.append(f"{failures} run(s) failed")
+    if grade_failures:
+        problems.append(f"{grade_failures} run(s) graded as fail")
+    if problems:
+        raise click.ClickException(", ".join(problems))
 
 
 def execute_run(runs_root, task, config_name, runner, model):
-    "Execute a single Run and record it, returning True on success"
+    "Execute a single Run and record it, returning (ok, run_dir)"
     started = datetime.now(timezone.utc)
     timestamp = started.strftime("%Y-%m-%dT%H-%M-%SZ")
     parent = runs_root / task["name"] / config_name / slugify(model)
@@ -216,7 +255,7 @@ def execute_run(runs_root, task, config_name, runner, model):
     relative = os.path.relpath(run_dir)
     display = relative if len(relative) < len(str(run_dir)) else str(run_dir)
     click.echo(f"{status} ({duration:.1f}s) -> {display}")
-    return ok
+    return ok, run_dir
 
 
 @cli.command()
@@ -242,14 +281,7 @@ def grade(eval_path, grader_name, regrade, runs_dir):
     eval_doc = load_eval(eval_path)
     runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
 
-    grader_path = eval_path / "graders" / f"{grader_name}.yaml"
-    if not grader_path.exists():
-        available = sorted(p.stem for p in (eval_path / "graders").glob("*.yaml"))
-        raise click.ClickException(
-            f"No grader named {grader_name!r} - available graders: "
-            + (", ".join(available) or "(none)")
-        )
-    grader = load_yaml(grader_path)
+    grader_path, grader = load_grader(eval_path, grader_name)
 
     run_files = sorted(runs_root.rglob("run.yaml"))
     if not run_files:
@@ -500,14 +532,7 @@ def report(eval_path, grader_name, by_task, as_json, runs_dir):
     eval_doc = load_eval(eval_path)
     runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
 
-    grader_path = eval_path / "graders" / f"{grader_name}.yaml"
-    if not grader_path.exists():
-        available = sorted(p.stem for p in (eval_path / "graders").glob("*.yaml"))
-        raise click.ClickException(
-            f"No grader named {grader_name!r} - available graders: "
-            + (", ".join(available) or "(none)")
-        )
-    grader = load_yaml(grader_path)
+    grader_path, grader = load_grader(eval_path, grader_name)
     grader_version = hashlib.sha256(grader_path.read_bytes()).hexdigest()[:7]
 
     rows, ungraded, stale = collect_grade_rows(runs_root, grader_name, grader)
