@@ -27,10 +27,12 @@
             padding: 14px 16px; margin-bottom: 16px; }
   section h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase;
                letter-spacing: 0.05em; color: #5a6b7b; }
+  h2.file-h { text-transform: none; letter-spacing: 0;
+              font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   section p.desc { margin: 0 0 10px; font-size: 14px; line-height: 1.5;
                    color: #34404c; max-width: 75ch; }
   .facts { display: flex; gap: 22px; font-size: 13px; color: #5a6b7b;
-           flex-wrap: wrap; }
+           flex-wrap: wrap; align-items: baseline; }
   .facts b { color: #1c2b3a; font-weight: 600; }
   a { color: #2c6cb0; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -42,7 +44,6 @@
   .card h3 { margin: 0 0 6px; font-size: 16px; }
   .card p { margin: 0 0 10px; font-size: 13px; color: #5a6b7b; line-height: 1.45; }
   .card .best { font-size: 13px; }
-  .card .best b { font-weight: 600; }
   .lb-row { display: flex; align-items: center; gap: 10px; padding: 5px 0;
             border-bottom: 1px solid #f0f2f4; font-size: 14px;
             color: inherit; text-decoration: none; }
@@ -76,6 +77,11 @@
                     text-align: right; }
   .tag { background: #eef3f8; border-radius: 4px; padding: 1px 7px;
          font-size: 12px; color: #2c5175; display: inline-block; margin: 1px; }
+  .picker { display: inline-flex; gap: 4px; }
+  .picker a { background: #eef3f8; border-radius: 4px; padding: 1px 9px;
+              font-size: 12px; color: #2c5175; text-decoration: none;
+              border: 1px solid transparent; }
+  .picker a.on { background: #1c2b3a; color: #fff; font-weight: 600; }
   .check { border-left: 3px solid #d6dde4; padding: 6px 12px; margin: 8px 0;
            font-size: 13px; }
   .check.required { border-left-color: #4a90d9; }
@@ -101,8 +107,6 @@
                border-radius: 6px; padding: 10px 12px; font-size: 12px;
                overflow-x: auto; max-height: 480px; }
   pre.output.tall { max-height: none; }
-  h2.file-h { text-transform: none; letter-spacing: 0;
-              font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   .kv { font-size: 13px; }
   .kv div { padding: 3px 0; display: flex; gap: 10px; }
   .kv dt { color: #5a6b7b; width: 110px; flex-shrink: 0; }
@@ -126,7 +130,7 @@
 <main id="view"></main>
 <script>
 "use strict";
-const state = { site: null, data: {}, fingerprint: {} };
+const state = { site: null, data: {}, fingerprint: {}, grader: {} };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g,
   c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -145,6 +149,15 @@ const IMAGE = /\.(png|svg|jpe?g|gif|webp)$/i;
 const runURL = (slug, run, file) => `evals/${slug}/runs/${run}/${file}`;
 const gradeURL = (slug, run, grader, file) =>
   `evals/${slug}/runs/${run}/grades/${grader}/${file}`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function currentGrader(slug) {
+  return state.grader[slug] || state.data[slug]?.eval.default_grader;
+}
+
+function gradeOf(row, grader) {
+  return (row.grades || {})[grader] || {};
+}
 
 async function fetchJSON(url) {
   const response = await fetch(url);
@@ -166,25 +179,29 @@ async function loadEval(slug) {
   return state.data[slug];
 }
 
-function groupRows(rows) {
+function selectGrader(slug, grader) {
+  state.grader[slug] = grader;
+  route();
+}
+
+function groupRows(rows, grader) {
   const groups = {};
   for (const r of rows) {
-    const key = r.config + " " + r.model;
+    const key = r.config + " " + r.model;
     (groups[key] ||= { config: r.config, model: r.model, rows: [] })
       .rows.push(r);
   }
   return Object.values(groups).map(g => {
-    const scores = g.rows.filter(r => r.score != null).map(r => r.score);
+    const scores = g.rows.map(r => gradeOf(r, grader).score)
+      .filter(s => s != null);
     return {
       ...g,
-      fails: g.rows.filter(r => r.outcome === "fail").length,
+      fails: g.rows.filter(r => gradeOf(r, grader).outcome === "fail").length,
       mean: scores.length
         ? scores.reduce((a, b) => a + b) / scores.length : null,
     };
   }).sort((a, b) => (b.mean ?? -1) - (a.mean ?? -1));
 }
-
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 // --- views --------------------------------------------------------------
 
@@ -203,8 +220,23 @@ function renderHome() {
           <span><b>${e.runs}</b> runs</span>
           <span><b>${e.graded}</b> graded</span>
           ${e.fails ? `<span><b>${e.fails}</b> fails</span>` : ""}
+          ${(e.graders || []).length > 1
+            ? `<span><b>${e.graders.length}</b> graders</span>` : ""}
         </div>
       </a>`).join("") + `</div>`;
+}
+
+function graderPickerHTML(slug) {
+  const data = state.data[slug];
+  const names = Object.keys(data.eval.graders || {});
+  const current = currentGrader(slug);
+  if (names.length < 2) {
+    return `<span>grader: <b>${esc(current ?? "(none)")}</b></span>`;
+  }
+  return `<span>grader: <span class="picker">${names.map(n =>
+    `<a href="javascript:void(0)" data-grader="${esc(n)}"
+        class="${n === current ? "on" : ""}">${esc(n)}</a>`).join("")}
+    </span></span>`;
 }
 
 function leaderboardHTML(slug, groups) {
@@ -223,12 +255,13 @@ function leaderboardHTML(slug, groups) {
     </a>`).join("");
 }
 
-function tagsHTML(rows) {
+function tagsHTML(rows, grader) {
   const counts = {};
   let graded = 0;
   for (const r of rows) {
-    if (r.graded) graded++;
-    for (const t of (r.tags || [])) counts[t] = (counts[t] || 0) + 1;
+    const grade = gradeOf(r, grader);
+    if (grade.graded) graded++;
+    for (const t of (grade.tags || [])) counts[t] = (counts[t] || 0) + 1;
   }
   const entries = Object.entries(counts)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -267,17 +300,21 @@ function feedsHTML(slug, rows, grader) {
       <span class="${r.exit_code === 0 ? "ok" : "fail"}">${
         r.exit_code === 0 ? "ok" : "failed"}</span>
     </a>`;
-  const gradeItem = r => `
+  const gradeItem = r => {
+    const grade = gradeOf(r, grader);
+    return `
     <a class="feed-item" href="#/${enc(slug)}/run/${r.run}">
-      <span class="when">${ago(r.graded)}</span>
+      <span class="when">${ago(grade.graded)}</span>
       <span class="what">${esc(r.task)} · ${esc(r.model)}</span>
-      <span class="${r.outcome === "pass" ? "ok" : "fail"}">${
-        r.score != null ? r.score.toFixed(2) : esc(r.outcome ?? "")}</span>
+      <span class="${grade.outcome === "pass" ? "ok" : "fail"}">${
+        grade.score != null ? grade.score.toFixed(2) : esc(grade.outcome ?? "")}</span>
     </a>`;
+  };
   const recentRuns = rows.filter(r => r.started)
     .sort((a, b) => b.started.localeCompare(a.started)).slice(0, 12);
-  const recentGrades = rows.filter(r => r.graded)
-    .sort((a, b) => b.graded.localeCompare(a.graded)).slice(0, 12);
+  const recentGrades = rows.filter(r => gradeOf(r, grader).graded)
+    .sort((a, b) => gradeOf(b, grader).graded
+      .localeCompare(gradeOf(a, grader).graded)).slice(0, 12);
   return `
     <section><h2>Recent runs</h2>${
       recentRuns.map(runItem).join("") ||
@@ -290,23 +327,24 @@ function feedsHTML(slug, rows, grader) {
 function galleryHTML(slug, rows, grader, limit) {
   const shots = [];
   for (const r of rows) {
-    for (const f of (r.grade_files || [])) {
+    const grade = gradeOf(r, grader);
+    for (const f of (grade.files || [])) {
       if (IMAGE.test(f)) {
-        shots.push({ row: r, file: f });
+        shots.push({ row: r, grade, file: f });
         break;
       }
     }
   }
   if (!shots.length) return "";
-  shots.sort((a, b) => (b.row.score ?? -1) - (a.row.score ?? -1));
+  shots.sort((a, b) => (b.grade.score ?? -1) - (a.grade.score ?? -1));
   const shown = limit ? shots.slice(0, limit) : shots;
   return `<section class="full"><h2>Gallery</h2><div class="gallery">` +
-    shown.map(({ row, file }) => `
+    shown.map(({ row, grade, file }) => `
       <a class="shot" href="#/${enc(slug)}/run/${row.run}">
         <img loading="lazy" src="${gradeURL(slug, row.run, grader, file)}">
         <div class="cap">
           <span class="m">${esc(row.model)} · ${esc(row.task)}</span>
-          <b>${row.score != null ? row.score.toFixed(2) : "–"}</b>
+          <b>${grade.score != null ? grade.score.toFixed(2) : "–"}</b>
         </div>
       </a>`).join("") + `</div>${limit && shots.length > limit
         ? `<p><a href="#/${enc(slug)}/gallery">All ${shots.length} images →</a></p>`
@@ -317,8 +355,10 @@ function renderEval(slug) {
   const data = state.data[slug];
   const info = data.eval;
   const rows = data.rows;
-  const groups = groupRows(rows);
+  const grader = currentGrader(slug);
+  const groups = groupRows(rows, grader);
   const models = new Set(rows.map(r => r.model));
+  const graded = rows.filter(r => gradeOf(r, grader).graded).length;
   document.getElementById("view").innerHTML = `
     <section class="full">
       <h2>${esc(info.name)}</h2>
@@ -328,14 +368,14 @@ function renderEval(slug) {
         <span><b>${info.configs.length}</b> ${info.configs.length === 1 ? "config" : "configs"}</span>
         <span><b>${models.size}</b> ${models.size === 1 ? "model" : "models"}</span>
         <span><b>${rows.length}</b> runs</span>
-        <span><b>${rows.filter(r => r.graded).length}</b> graded</span>
-        <span>grader: <b>${esc(info.grader_name)}</b></span>
+        <span><b>${graded}</b> graded</span>
+        ${graderPickerHTML(slug)}
       </div>
     </section>
     <div class="grid">
       <div>
         <section><h2>Leaderboard</h2>${leaderboardHTML(slug, groups)}</section>
-        ${tagsHTML(rows)}
+        ${tagsHTML(rows, grader)}
         <section><h2>What was tested</h2>${
           info.tasks.map(t => `
             <div class="task-item"><b>${esc(t.name)}</b>${t.prompt
@@ -345,32 +385,41 @@ function renderEval(slug) {
                    .map(([k, v]) => `${k}: ${v}`).join(", "))}</div>`}
             </div>`).join("") || `<div class="empty">No tasks.</div>`}
         </section>
-        <section><h2>How it was graded</h2>${checksHTML(info.grader)}</section>
+        <section><h2>How it was graded (${esc(grader ?? "no grader")})</h2>${
+          checksHTML(info.graders?.[grader])}</section>
       </div>
-      <div>${feedsHTML(slug, rows, info.grader_name)}</div>
+      <div>${feedsHTML(slug, rows, grader)}</div>
     </div>
-    ${galleryHTML(slug, rows, info.grader_name, 8)}`;
+    ${galleryHTML(slug, rows, grader, 8)}`;
+  bindGraderPicker(slug);
+}
+
+function bindGraderPicker(slug) {
+  document.querySelectorAll(".picker a").forEach(a =>
+    a.addEventListener("click", () => selectGrader(slug, a.dataset.grader)));
 }
 
 function renderGallery(slug) {
   const data = state.data[slug];
+  const grader = currentGrader(slug);
   document.getElementById("view").innerHTML = `
     <div class="crumb"><a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a></div>
-    ${galleryHTML(slug, data.rows, data.eval.grader_name, 0) ||
+    ${galleryHTML(slug, data.rows, grader, 0) ||
       `<section><div class="empty">No images.</div></section>`}`;
 }
 
 function renderModel(slug, config, model) {
   const data = state.data[slug];
+  const grader = currentGrader(slug);
   const rows = data.rows.filter(r => r.config === config && r.model === model);
-  const scores = rows.filter(r => r.score != null).map(r => r.score);
+  const scores = rows.map(r => gradeOf(r, grader).score).filter(s => s != null);
   const mean = scores.length
     ? (scores.reduce((a, b) => a + b) / scores.length) : null;
   const tasks = {};
   for (const r of rows) (tasks[r.task] ||= []).push(r);
   const metrics = {};
   for (const r of rows) {
-    for (const c of (r.checks || [])) {
+    for (const c of (gradeOf(r, grader).checks || [])) {
       for (const [k, v] of Object.entries(c.metrics || {})) {
         (metrics[k] ||= []).push(v);
       }
@@ -383,7 +432,9 @@ function renderModel(slug, config, model) {
       <div class="facts">
         <span>score: <b>${mean == null ? "–" : mean.toFixed(3)}</b></span>
         <span><b>${plural(rows.length, "run")}</b></span>
-        <span><b>${rows.filter(r => r.outcome === "fail").length}</b> fails</span>
+        <span><b>${rows.filter(r =>
+          gradeOf(r, grader).outcome === "fail").length}</b> fails</span>
+        ${graderPickerHTML(slug)}
       </div>
       ${Object.entries(metrics).map(([k, vs]) => {
         const nums = vs.map(v => typeof v === "boolean" ? (v ? 1 : 0) : v);
@@ -395,11 +446,112 @@ function renderModel(slug, config, model) {
     </section>
     <section><h2>Runs by task</h2>${Object.entries(tasks).map(([task, trs]) => `
       <div class="task-item"><b>${esc(task)}</b><div>${trs
-        .map(r => `<a class="tag" href="#/${enc(slug)}/run/${r.run}">${
-          r.score != null ? r.score.toFixed(2)
-          : (r.outcome ?? (r.exit_code === 0 ? "ungraded" : "failed"))}</a>`)
-        .join(" ")}</div></div>`).join("")}
+        .map(r => {
+          const grade = gradeOf(r, grader);
+          return `<a class="tag" href="#/${enc(slug)}/run/${r.run}">${
+            grade.score != null ? grade.score.toFixed(2)
+            : (grade.outcome ?? (r.exit_code === 0 ? "ungraded" : "failed"))}</a>`;
+        }).join(" ")}</div></div>`).join("")}
     </section>`;
+  bindGraderPicker(slug);
+}
+
+function taskDetailHTML(task) {
+  if (!task) return `<div class="empty">Task definition not found.</div>`;
+  const fields = Object.entries(task).filter(([k]) => k !== "name");
+  if (!fields.length) return `<div class="empty">No task fields.</div>`;
+  return fields.map(([key, value]) =>
+    `<div class="img-cap">${esc(key)}</div>` +
+    `<pre class="output">${esc(typeof value === "string"
+      ? value : JSON.stringify(value, null, 2))}</pre>`).join("");
+}
+
+function gradeSectionHTML(slug, row, name, grade) {
+  const outcome = grade.outcome
+    ? ` · <span class="${grade.outcome === "pass" ? "ok" : "fail"}">${
+        esc(grade.outcome)}${grade.score != null
+          ? " " + grade.score.toFixed(2) : ""}</span>`
+    : "";
+  return `<section><h2>Grade: ${esc(name)}${outcome}</h2>
+    ${(grade.checks || []).map(check => `
+      <div class="check${check.skipped ? "" : (check.ok ? " required" : "")}">
+        <div class="head">${esc(check.checker)} ·
+          ${check.skipped ? "skipped"
+            : `<span class="${check.ok ? "ok" : "fail"}">${check.ok ? "ok" : "failed"}</span>`}
+          ${check.score != null ? ` · ${check.score}` : ""}</div>
+        ${check.notes ? `<div class="conf">${esc(check.notes)}</div>` : ""}
+        ${Object.entries(check.metrics || {}).map(([k, v]) =>
+          `<div class="conf">${esc(k)}: ${esc(String(v))}</div>`).join("")}
+        ${(check.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
+      </div>`).join("") || `<div class="empty">No checks recorded.</div>`}
+  </section>`;
+}
+
+async function renderRun(slug, runPath) {
+  const data = state.data[slug];
+  const row = data.rows.find(r => r.run === runPath);
+  if (!row) {
+    document.getElementById("view").innerHTML =
+      `<section><div class="empty">Run not found: ${esc(runPath)}</div></section>`;
+    return;
+  }
+  const gradeNames = Object.keys(row.grades || {});
+  const images = [
+    ...(row.files || []).filter(f => IMAGE.test(f))
+      .map(f => ({ label: f, src: runURL(slug, row.run, f) })),
+    ...gradeNames.flatMap(name =>
+      (row.grades[name].files || []).filter(f => IMAGE.test(f))
+        .map(f => ({ label: `grades/${name}/${f}`,
+                     src: gradeURL(slug, row.run, name, f) }))),
+  ];
+  const fileChip = (href, label) =>
+    `<a class="tag" href="${href}">${esc(label)}</a>`;
+  document.getElementById("view").innerHTML = `
+    <div class="crumb">
+      <a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a> /
+      <a href="#/${enc(slug)}/model/${enc(row.config)}/${enc(row.model)}">${esc(row.model)}</a> /
+      ${esc(row.task)}
+    </div>
+    <div class="grid">
+    <div>
+    <section>
+      <h2>Run</h2>
+      <div class="kv">
+        <div><dt>task</dt><dd>${esc(row.task)}</dd></div>
+        <div><dt>model</dt><dd>${esc(row.model)}</dd></div>
+        <div><dt>config</dt><dd>${esc(row.config)}</dd></div>
+        <div><dt>started</dt><dd>${esc(row.started ?? "?")} (${ago(row.started)})</dd></div>
+        <div><dt>duration</dt><dd>${row.duration != null ? row.duration + "s" : "?"}</dd></div>
+        <div><dt>exit code</dt><dd class="${row.exit_code === 0 ? "ok" : "fail"}">${row.exit_code}</dd></div>
+        ${row.imported_from ? `<div><dt>imported from</dt><dd>${esc(row.imported_from)}</dd></div>` : ""}
+      </div>
+    </section>
+    <section><h2>Task: ${esc(row.task)}</h2>${taskDetailHTML(
+      data.eval.tasks.find(t => t.name === row.task))}</section>
+    ${images.map(img => `<div class="img-cap">${esc(img.label)}</div>` +
+      `<img class="artifact-img" src="${img.src}">`).join("")}
+    <section><h2>Output</h2><pre class="output" id="run-output">loading…</pre></section>
+    <section><h2>Files</h2>
+      ${(row.files || []).map(f => fileChip(
+        `#/${enc(slug)}/run/${row.run}/file/${f}`, f)).join(" ")}
+      ${gradeNames.flatMap(name =>
+        (row.grades[name].files || []).map(f => fileChip(
+          `#/${enc(slug)}/run/${row.run}/file/grades/${name}/${f}`,
+          `grades/${name}/${f}`))).join(" ")}
+    </section>
+    </div>
+    <div>
+      ${gradeNames.map(name =>
+        gradeSectionHTML(slug, row, name, row.grades[name])).join("") ||
+        `<section><div class="empty">Not graded.</div></section>`}
+    </div>
+    </div>`;
+  try {
+    const response = await fetch(runURL(slug, row.run, "output.txt"));
+    const text = await response.text();
+    const el = document.getElementById("run-output");
+    if (el) el.textContent = text.slice(0, 20000) || "(empty)";
+  } catch (e) { /* leave placeholder */ }
 }
 
 async function renderFile(slug, runPath, filePath) {
@@ -439,89 +591,6 @@ async function renderFile(slug, runPath, filePath) {
   }
 }
 
-function taskDetailHTML(task) {
-  if (!task) return `<div class="empty">Task definition not found.</div>`;
-  const fields = Object.entries(task).filter(([k]) => k !== "name");
-  if (!fields.length) return `<div class="empty">No task fields.</div>`;
-  return fields.map(([key, value]) =>
-    `<div class="img-cap">${esc(key)}</div>` +
-    `<pre class="output">${esc(typeof value === "string"
-      ? value : JSON.stringify(value, null, 2))}</pre>`).join("");
-}
-
-async function renderRun(slug, runPath) {
-  const data = state.data[slug];
-  const row = data.rows.find(r => r.run === runPath);
-  if (!row) {
-    document.getElementById("view").innerHTML =
-      `<section><div class="empty">Run not found: ${esc(runPath)}</div></section>`;
-    return;
-  }
-  const grader = data.eval.grader_name;
-  const images = [
-    ...(row.files || []).filter(f => IMAGE.test(f))
-      .map(f => ({ label: f, src: runURL(slug, row.run, f) })),
-    ...(row.grade_files || []).filter(f => IMAGE.test(f))
-      .map(f => ({ label: `grades/${grader}/${f}`,
-                   src: gradeURL(slug, row.run, grader, f) })),
-  ];
-  document.getElementById("view").innerHTML = `
-    <div class="crumb">
-      <a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a> /
-      <a href="#/${enc(slug)}/model/${enc(row.config)}/${enc(row.model)}">${esc(row.model)}</a> /
-      ${esc(row.task)}
-    </div>
-    <div class="grid">
-    <div>
-    <section>
-      <h2>Run</h2>
-      <div class="kv">
-        <div><dt>task</dt><dd>${esc(row.task)}</dd></div>
-        <div><dt>model</dt><dd>${esc(row.model)}</dd></div>
-        <div><dt>config</dt><dd>${esc(row.config)}</dd></div>
-        <div><dt>started</dt><dd>${esc(row.started ?? "?")} (${ago(row.started)})</dd></div>
-        <div><dt>duration</dt><dd>${row.duration != null ? row.duration + "s" : "?"}</dd></div>
-        <div><dt>exit code</dt><dd class="${row.exit_code === 0 ? "ok" : "fail"}">${row.exit_code}</dd></div>
-        ${row.imported_from ? `<div><dt>imported from</dt><dd>${esc(row.imported_from)}</dd></div>` : ""}
-      </div>
-    </section>
-    <section><h2>Task: ${esc(row.task)}</h2>${taskDetailHTML(
-      data.eval.tasks.find(t => t.name === row.task))}</section>
-    ${images.map(img => `<div class="img-cap">${esc(img.label)}</div>` +
-      `<img class="artifact-img" src="${img.src}">`).join("")}
-    <section><h2>Output</h2><pre class="output" id="run-output">loading…</pre></section>
-    <section><h2>Files</h2>
-      ${(row.files || []).map(f =>
-        `<a class="tag" href="#/${enc(slug)}/run/${row.run}/file/${f}">${esc(f)}</a>`).join(" ")}
-      ${(row.grade_files || []).map(f =>
-        `<a class="tag" href="#/${enc(slug)}/run/${row.run}/file/grades/${grader}/${f}">grades/${esc(f)}</a>`).join(" ")}
-    </section>
-    </div>
-    <div>
-    <section>
-      <h2>Grade${row.outcome ? ` · <span class="${row.outcome === "pass" ? "ok" : "fail"}">${esc(row.outcome)}${row.score != null ? " " + row.score.toFixed(2) : ""}</span>` : ""}</h2>
-      ${(row.checks || []).map(check => `
-        <div class="check${check.skipped ? "" : (check.ok ? " required" : "")}">
-          <div class="head">${esc(check.checker)} ·
-            ${check.skipped ? "skipped"
-              : `<span class="${check.ok ? "ok" : "fail"}">${check.ok ? "ok" : "failed"}</span>`}
-            ${check.score != null ? ` · ${check.score}` : ""}</div>
-          ${check.notes ? `<div class="conf">${esc(check.notes)}</div>` : ""}
-          ${Object.entries(check.metrics || {}).map(([k, v]) =>
-            `<div class="conf">${esc(k)}: ${esc(String(v))}</div>`).join("")}
-          ${(check.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
-        </div>`).join("") || `<div class="empty">Not graded.</div>`}
-    </section>
-    </div>
-    </div>`;
-  try {
-    const response = await fetch(runURL(slug, row.run, "output.txt"));
-    const text = await response.text();
-    const el = document.getElementById("run-output");
-    if (el) el.textContent = text.slice(0, 20000) || "(empty)";
-  } catch (e) { /* leave placeholder */ }
-}
-
 // --- routing + polling --------------------------------------------------
 
 function currentRoute() {
@@ -557,11 +626,14 @@ async function route() {
 }
 
 function fingerprint(data) {
-  const graded = data.rows.filter(r => r.graded);
-  return [
-    data.rows.length, graded.length,
-    graded.length ? graded.map(r => r.graded).sort().at(-1) : "",
-  ].join("|");
+  const stamps = [];
+  for (const row of data.rows) {
+    for (const grade of Object.values(row.grades || {})) {
+      if (grade.graded) stamps.push(grade.graded);
+    }
+  }
+  stamps.sort();
+  return [data.rows.length, stamps.length, stamps.at(-1) ?? ""].join("|");
 }
 
 async function poll() {

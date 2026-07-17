@@ -43,13 +43,18 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
-def collect_eval(eval_path, grader_name):
+def collect_eval(eval_path, default_grader="default"):
     "Everything the app needs to render one eval, as one JSON document"
     doc = cached_yaml(eval_path / "eval.yaml")
     tasks = [cached_yaml(p) for p in sorted((eval_path / "tasks").glob("*.yaml"))]
     configs = [cached_yaml(p) for p in sorted((eval_path / "configs").glob("*.yaml"))]
-    grader_path = eval_path / "graders" / f"{grader_name}.yaml"
-    grader = cached_yaml(grader_path) if grader_path.exists() else None
+    grader_names = sorted(p.stem for p in (eval_path / "graders").glob("*.yaml"))
+    graders = {
+        name: cached_yaml(eval_path / "graders" / f"{name}.yaml")
+        for name in grader_names
+    }
+    if default_grader not in graders:
+        default_grader = grader_names[0] if grader_names else None
 
     rows = []
     runs_root = eval_path / "runs"
@@ -59,33 +64,38 @@ def collect_eval(eval_path, grader_name):
             run = cached_yaml(run_file)
             task = run.get("task")
             config = run.get("config", {})
-            row = {
-                "run": str(run_dir.relative_to(runs_root)),
-                "task": task.get("name") if isinstance(task, dict) else task,
-                "config": config.get("name"),
-                "model": config.get("model"),
-                "started": run.get("started"),
-                "duration": run.get("duration_seconds"),
-                "exit_code": run.get("exit_code"),
-                "imported_from": run.get("imported_from"),
-                "files": sorted(p.name for p in run_dir.iterdir() if p.is_file()),
-            }
-            grade_file = run_dir / "grades" / grader_name / "grade.yaml"
-            if grade_file.exists():
+            grades = {}
+            for name in grader_names:
+                grade_file = run_dir / "grades" / name / "grade.yaml"
+                if not grade_file.exists():
+                    continue
                 grade = cached_yaml(grade_file)
-                row |= {
+                grades[name] = {
                     "outcome": grade.get("outcome"),
                     "score": grade.get("score"),
                     "graded": grade.get("graded"),
                     "tags": grade.get("tags") or [],
                     "checks": grade.get("checks") or [],
-                    "grade_files": sorted(
+                    "files": sorted(
                         p.name
                         for p in grade_file.parent.iterdir()
                         if p.is_file() and p.name != "grade.yaml"
                     ),
                 }
-            rows.append(row)
+            rows.append(
+                {
+                    "run": str(run_dir.relative_to(runs_root)),
+                    "task": task.get("name") if isinstance(task, dict) else task,
+                    "config": config.get("name"),
+                    "model": config.get("model"),
+                    "started": run.get("started"),
+                    "duration": run.get("duration_seconds"),
+                    "exit_code": run.get("exit_code"),
+                    "imported_from": run.get("imported_from"),
+                    "files": sorted(p.name for p in run_dir.iterdir() if p.is_file()),
+                    "grades": grades,
+                }
+            )
 
     return {
         "eval": {
@@ -93,8 +103,8 @@ def collect_eval(eval_path, grader_name):
             "description": doc.get("description", ""),
             "tasks": tasks,
             "configs": configs,
-            "grader_name": grader_name,
-            "grader": grader,
+            "graders": graders,
+            "default_grader": default_grader,
         },
         "rows": rows,
         "generated": now_iso(),
@@ -102,13 +112,18 @@ def collect_eval(eval_path, grader_name):
 
 
 def eval_summary(slug, data):
-    "The index.json entry for one eval"
+    "The index.json entry for one eval, scored by its default grader"
     rows = data["rows"]
+    grader = data["eval"]["default_grader"]
+    grades = [row["grades"][grader] for row in rows if grader in row["grades"]]
     best = None
     groups = {}
     for row in rows:
-        if row.get("score") is not None:
-            groups.setdefault((row["config"], row["model"]), []).append(row["score"])
+        grade = row["grades"].get(grader) or {}
+        if grade.get("score") is not None:
+            groups.setdefault((row["config"], row["model"]), []).append(
+                grade["score"]
+            )
     for (config, model), scores in groups.items():
         mean = sum(scores) / len(scores)
         if best is None or mean > best["score"]:
@@ -123,11 +138,16 @@ def eval_summary(slug, data):
         "name": data["eval"]["name"],
         "description": data["eval"]["description"],
         "runs": len(rows),
-        "graded": sum(1 for r in rows if r.get("graded")),
-        "fails": sum(1 for r in rows if r.get("outcome") == "fail"),
+        "graded": len(grades),
+        "fails": sum(1 for g in grades if g.get("outcome") == "fail"),
+        "graders": grader_list(data),
         "best": best,
         "updated": data["generated"],
     }
+
+
+def grader_list(data):
+    return sorted(data["eval"]["graders"])
 
 
 def app_html():
