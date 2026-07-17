@@ -18,7 +18,20 @@ import yaml
 @click.group()
 @click.version_option()
 def cli():
-    "TODO help"
+    """Run evals against LLMs and agent harnesses.
+
+    An Eval is a directory with an eval.yaml describing what is being
+    evaluated, tasks/ for the exercises, configs/ for how to attempt
+    them and graders/ for how to score the results. Runs and their
+    Grades are recorded as plain files in runs/.
+
+    A typical workflow:
+
+    \b
+      smevals run examples/my-eval -m gpt-4.1-mini -g
+      smevals report examples/my-eval
+      smevals serve examples/
+    """
 
 
 def slugify(text):

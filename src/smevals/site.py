@@ -1,7 +1,7 @@
 """Shared data layer for the HTML report, plus the live server and
 static site builder.
 
-Both `smeval serve` and `smeval build` produce the same site shape:
+Both `smevals serve` and `smevals build` produce the same site shape:
 
     index.html            the app (single self-contained file)
     index.json            site manifest: one entry per eval
@@ -133,7 +133,7 @@ def eval_summary(slug, data):
 
 
 def app_html():
-    return (files("smeval") / "app.html").read_text()
+    return (files("smevals") / "app.html").read_text()
 
 
 # --- live server ---------------------------------------------------------

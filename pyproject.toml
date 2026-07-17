@@ -1,5 +1,5 @@
 [project]
-name = "smeval"
+name = "smevals"
 version = "0.1.0"
 description = "A tool for small model evals"
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-smeval = "smeval.cli:cli"
+smevals = "smevals.cli:cli"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]
