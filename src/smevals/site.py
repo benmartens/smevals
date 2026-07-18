@@ -121,9 +121,7 @@ def eval_summary(slug, data):
     for row in rows:
         grade = row["grades"].get(grader) or {}
         if grade.get("score") is not None:
-            groups.setdefault((row["config"], row["model"]), []).append(
-                grade["score"]
-            )
+            groups.setdefault((row["config"], row["model"]), []).append(grade["score"])
     for (config, model), scores in groups.items():
         mean = sum(scores) / len(scores)
         if best is None or mean > best["score"]:
