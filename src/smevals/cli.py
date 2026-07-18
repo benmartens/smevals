@@ -34,6 +34,15 @@ def cli():
     """
 
 
+@cli.command()
+def docs():
+    "Output the smevals documentation"
+    from importlib.metadata import metadata
+
+    meta = metadata("smevals")
+    click.echo(meta.get_payload() or meta.get("Description", ""))
+
+
 def slugify(text):
     return re.sub(r"[^a-zA-Z0-9._-]+", "-", text).strip("-")
 
