@@ -65,6 +65,8 @@
                text-decoration: none; }
   .feed-item:hover { background: #f8fafc; }
   .feed-item .when { color: #8a97a5; width: 70px; flex-shrink: 0; }
+  .feed-item .when-wide { color: #8a97a5; width: 130px; flex-shrink: 0;
+                          font-variant-numeric: tabular-nums; }
   .feed-item .what { flex: 1; overflow: hidden; text-overflow: ellipsis;
                      white-space: nowrap; }
   .ok { color: #2e7d32; font-weight: 600; }
@@ -469,8 +471,8 @@ function renderModel(slug, config, model) {
       <div class="facts">
         <span>score: <b>${mean == null ? "–" : mean.toFixed(3)}</b></span>
         <span><b>${plural(rows.length, "run")}</b></span>
-        <span><b>${rows.filter(r =>
-          gradeOf(r, grader).outcome === "fail").length}</b> fails</span>
+        <span>${plural(rows.filter(r =>
+          gradeOf(r, grader).outcome === "fail").length, "fail")}</span>
         ${graderPickerHTML(slug)}
       </div>
       ${Object.entries(metrics).map(([k, vs]) => {
@@ -482,13 +484,21 @@ function renderModel(slug, config, model) {
       }).join("")}
     </section>
     <section><h2>Runs by task</h2>${Object.entries(tasks).map(([task, trs]) => `
-      <div class="task-item"><b>${esc(task)}</b><div>${trs
+      <div class="task-item"><b>${esc(task)}</b>${trs
+        .slice().sort((a, b) => (a.started ?? "").localeCompare(b.started ?? ""))
         .map(r => {
           const grade = gradeOf(r, grader);
-          return `<a class="tag" href="#/${enc(slug)}/run/${r.run}">${
-            grade.score != null ? grade.score.toFixed(2)
-            : (grade.outcome ?? (r.exit_code === 0 ? "ungraded" : "failed"))}</a>`;
-        }).join(" ")}</div></div>`).join("")}
+          const failed = grade.outcome === "fail" || r.exit_code !== 0;
+          const label = grade.score != null ? grade.score.toFixed(2)
+            : (grade.outcome ?? (r.exit_code === 0 ? "ungraded" : "run failed"));
+          return `<a class="feed-item" href="#/${enc(slug)}/run/${r.run}">
+            <span class="when-wide">${esc((r.started ?? "")
+              .slice(0, 16).replace("T", " ") || "?")}</span>
+            <span class="what">${ago(r.started)}</span>
+            <span class="${failed ? "fail" : (grade.outcome === "pass" ? "ok" : "")}">${
+              esc(String(label))}</span>
+          </a>`;
+        }).join("")}</div>`).join("")}
     </section>`;
   bindGraderPicker(slug);
 }
