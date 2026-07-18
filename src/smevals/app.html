@@ -135,7 +135,7 @@
 <main id="view"></main>
 <script>
 "use strict";
-const state = { site: null, data: {}, fingerprint: {}, grader: {} };
+const state = { site: null, data: {}, fingerprint: {} };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g,
   c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -157,7 +157,18 @@ const gradeURL = (slug, run, grader, file) =>
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function currentGrader(slug) {
-  return state.grader[slug] || state.data[slug]?.eval.default_grader;
+  // The URL is the source of truth: #/eval-slug?grader=judge
+  const requested = currentRoute().params.get("grader");
+  const graders = state.data[slug]?.eval.graders || {};
+  if (requested && requested in graders) return requested;
+  return state.data[slug]?.eval.default_grader;
+}
+
+function graderQuery(slug) {
+  "Query suffix that carries a non-default grader choice between pages";
+  const grader = currentGrader(slug);
+  return grader && grader !== state.data[slug]?.eval.default_grader
+    ? `?grader=${enc(grader)}` : "";
 }
 
 function gradeOf(row, grader) {
@@ -182,11 +193,6 @@ async function loadEval(slug) {
   state.data[slug] = await fetchJSON(`evals/${slug}/eval.json`);
   state.fingerprint[slug] = fingerprint(state.data[slug]);
   return state.data[slug];
-}
-
-function selectGrader(slug, grader) {
-  state.grader[slug] = grader;
-  route();
 }
 
 function groupRows(rows, grader) {
@@ -238,8 +244,12 @@ function graderPickerHTML(slug) {
   if (names.length < 2) {
     return `<span>grader: <b>${esc(current ?? "(none)")}</b></span>`;
   }
+  // Plain links: the grader choice lives in the URL, so it survives
+  // reloads, deep links and the back button
+  const path = location.hash.replace(/^#/, "").split("?")[0];
   return `<span>grader: <span class="picker">${names.map(n =>
-    `<a href="javascript:void(0)" data-grader="${esc(n)}"
+    `<a href="#${path}${n === data.eval.default_grader
+        ? "" : `?grader=${enc(n)}`}"
         class="${n === current ? "on" : ""}">${esc(n)}</a>`).join("")}
     </span></span>`;
 }
@@ -248,7 +258,7 @@ function leaderboardHTML(slug, groups) {
   if (!groups.length) return `<div class="empty">No runs yet.</div>`;
   return groups.map((g, i) => `
     <a class="lb-row"
-       href="#/${enc(slug)}/model/${enc(g.config)}/${enc(g.model)}">
+       href="#/${enc(slug)}/model/${enc(g.config)}/${enc(g.model)}${graderQuery(slug)}">
       <div class="rank">${i + 1}</div>
       <div class="mid">
         <div class="name">${esc(g.model)} <span class="sub">(${esc(g.config)})</span></div>
@@ -272,7 +282,7 @@ function tagsHTML(slug, rows, grader) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   if (!entries.length) return "";
   return `<section><h2>Tags</h2>` + entries.map(([tag, n]) => `
-    <a class="tag-row" href="#/${enc(slug)}/tag/${enc(tag)}">
+    <a class="tag-row" href="#/${enc(slug)}/tag/${enc(tag)}${graderQuery(slug)}">
       <span class="share">${n}/${graded} (${Math.round(n / graded * 100)}%)</span>
       <span class="tag-name">${esc(tag)}</span>
     </a>`).join("") + `</section>`;
@@ -352,7 +362,7 @@ function galleryHTML(slug, rows, grader, limit) {
           <b>${grade.score != null ? grade.score.toFixed(2) : "–"}</b>
         </div>
       </a>`).join("") + `</div>${limit && shots.length > limit
-        ? `<p><a href="#/${enc(slug)}/gallery">All ${shots.length} images →</a></p>`
+        ? `<p><a href="#/${enc(slug)}/gallery${graderQuery(slug)}">All ${shots.length} images →</a></p>`
         : ""}</section>`;
 }
 
@@ -396,12 +406,6 @@ function renderEval(slug) {
       <div>${feedsHTML(slug, rows, grader)}</div>
     </div>
     ${galleryHTML(slug, rows, grader, 8)}`;
-  bindGraderPicker(slug);
-}
-
-function bindGraderPicker(slug) {
-  document.querySelectorAll(".picker a").forEach(a =>
-    a.addEventListener("click", () => selectGrader(slug, a.dataset.grader)));
 }
 
 function renderTag(slug, tag) {
@@ -423,7 +427,7 @@ function renderTag(slug, tag) {
     </a>`;
   };
   document.getElementById("view").innerHTML = `
-    <div class="crumb"><a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a>
+    <div class="crumb"><a href="#/${enc(slug)}${graderQuery(slug)}">← ${esc(data.eval.name)}</a>
       / tag: ${esc(tag)}</div>
     <section>
       <h2>${esc(tag)}</h2>
@@ -442,7 +446,7 @@ function renderGallery(slug) {
   const data = state.data[slug];
   const grader = currentGrader(slug);
   document.getElementById("view").innerHTML = `
-    <div class="crumb"><a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a></div>
+    <div class="crumb"><a href="#/${enc(slug)}${graderQuery(slug)}">← ${esc(data.eval.name)}</a></div>
     ${galleryHTML(slug, data.rows, grader, 0) ||
       `<section><div class="empty">No images.</div></section>`}`;
 }
@@ -465,7 +469,7 @@ function renderModel(slug, config, model) {
     }
   }
   document.getElementById("view").innerHTML = `
-    <div class="crumb"><a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a></div>
+    <div class="crumb"><a href="#/${enc(slug)}${graderQuery(slug)}">← ${esc(data.eval.name)}</a></div>
     <section>
       <h2>${esc(model)} (${esc(config)})</h2>
       <div class="facts">
@@ -500,7 +504,6 @@ function renderModel(slug, config, model) {
           </a>`;
         }).join("")}</div>`).join("")}
     </section>`;
-  bindGraderPicker(slug);
 }
 
 function taskDetailHTML(task) {
@@ -642,11 +645,13 @@ async function renderFile(slug, runPath, filePath) {
 // --- routing + polling --------------------------------------------------
 
 function currentRoute() {
-  const parts = location.hash.replace(/^#\/?/, "").split("/");
+  const [path, query] = location.hash.replace(/^#\/?/, "").split("?");
+  const parts = path.split("/");
   return {
     slug: decodeURIComponent(parts[0] || ""),
     section: parts[1] || "",
     rest: parts.slice(2),
+    params: new URLSearchParams(query || ""),
   };
 }
 
