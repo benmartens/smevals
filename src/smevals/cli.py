@@ -85,7 +85,7 @@ runs_dir_option = click.option(
 
 
 def scalar_env_vars(prefix, mapping):
-    "Scalar mapping values as env vars, e.g. submission -> SMEVAL_TASK_SUBMISSION"
+    "Scalar mapping values as env vars, e.g. submission -> SMEVALS_TASK_SUBMISSION"
     return {
         prefix + re.sub(r"[^A-Za-z0-9]+", "_", key).upper(): str(value)
         for key, value in mapping.items()
@@ -238,16 +238,16 @@ def execute_run(runs_root, task, config_name, runner, model):
     click.echo(f"{task['name']} / {config_name} / {model} ... ", nl=False)
     env = (
         os.environ
-        | scalar_env_vars("SMEVAL_TASK_", task)
+        | scalar_env_vars("SMEVALS_TASK_", task)
         | {
-            "SMEVAL_MODEL": model,
-            "SMEVAL_TASK": task["name"],
-            "SMEVAL_RUN_DIR": str(run_dir.resolve()),
+            "SMEVALS_MODEL": model,
+            "SMEVALS_TASK": task["name"],
+            "SMEVALS_RUN_DIR": str(run_dir.resolve()),
         }
     )
     # Not every Task is a single prompt - some carry other data instead
     if "prompt" in task:
-        env["SMEVAL_PROMPT"] = task["prompt"]
+        env["SMEVALS_PROMPT"] = task["prompt"]
     t0 = time.monotonic()
     result = subprocess.run(
         [str(runner)], cwd=run_dir, env=env, capture_output=True, text=True
@@ -424,17 +424,17 @@ def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     # Scalar check and task keys become individual env vars, for shell scripts.
     env = (
         os.environ
-        | scalar_env_vars("SMEVAL_CHECK_", check)
+        | scalar_env_vars("SMEVALS_CHECK_", check)
         | {
-            "SMEVAL_RUN_DIR": str(run_dir.resolve()),
-            "SMEVAL_CHECK": json.dumps(check),
+            "SMEVALS_RUN_DIR": str(run_dir.resolve()),
+            "SMEVALS_CHECK": json.dumps(check),
         }
     )
     if isinstance(task, dict):
-        env |= scalar_env_vars("SMEVAL_TASK_", task)
+        env |= scalar_env_vars("SMEVALS_TASK_", task)
     task_name = task.get("name") if isinstance(task, dict) else task
     if task_name:
-        env["SMEVAL_TASK"] = task_name
+        env["SMEVALS_TASK"] = task_name
     result = subprocess.run(
         [str(checker)], cwd=grade_dir, env=env, capture_output=True, text=True
     )

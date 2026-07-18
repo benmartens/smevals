@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scores $SMEVAL_CHECK_IMAGE against $SMEVAL_CHECK_RUBRIC with a vision
+"""Scores $SMEVALS_CHECK_IMAGE against $SMEVALS_CHECK_RUBRIC with a vision
 model, via llm. The judge scores 0-10 (natural for rubrics) and offers
 descriptive tags; this checker normalizes to the check result contract:
 score 0.0-1.0, tags, notes, details. Full JSON schema with
@@ -12,7 +12,7 @@ import sys
 
 # A tags list in the Check config becomes a controlled vocabulary,
 # enforced by the schema itself; without one the judge tags freely.
-allowed_tags = json.loads(os.environ["SMEVAL_CHECK"]).get("tags")
+allowed_tags = json.loads(os.environ["SMEVALS_CHECK"]).get("tags")
 if allowed_tags:
     tag_items = {"type": "string", "enum": allowed_tags}
     tag_description = "every tag from the allowed list that is true of the image"
@@ -42,12 +42,12 @@ result = subprocess.run(
     [
         "llm",
         "-m",
-        os.environ["SMEVAL_CHECK_MODEL"],
+        os.environ["SMEVALS_CHECK_MODEL"],
         "-a",
-        os.environ["SMEVAL_CHECK_IMAGE"],
+        os.environ["SMEVALS_CHECK_IMAGE"],
         "--schema",
         json.dumps(SCHEMA),
-        os.environ["SMEVAL_CHECK_RUBRIC"],
+        os.environ["SMEVALS_CHECK_RUBRIC"],
     ],
     capture_output=True,
     text=True,

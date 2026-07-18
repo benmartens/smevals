@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """LLM-as-judge for text output. Sends the Run's output to a judge
-model along with $SMEVAL_CHECK_RUBRIC. The judge scores 0-10 and
+model along with $SMEVALS_CHECK_RUBRIC. The judge scores 0-10 and
 applies tags; a tags list in the Check config becomes a controlled
 vocabulary enforced by the schema. Emits the check result contract:
 score 0.0-1.0, tags, notes, details.
@@ -11,9 +11,9 @@ import pathlib
 import subprocess
 import sys
 
-output = (pathlib.Path(os.environ["SMEVAL_RUN_DIR"]) / "output.txt").read_text()
+output = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
 
-allowed_tags = json.loads(os.environ["SMEVAL_CHECK"]).get("tags")
+allowed_tags = json.loads(os.environ["SMEVALS_CHECK"]).get("tags")
 if allowed_tags:
     tag_items = {"type": "string", "enum": allowed_tags}
     tag_description = "every tag from the allowed list that is true of the text"
@@ -39,9 +39,9 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
-prompt = os.environ["SMEVAL_CHECK_RUBRIC"] + "\n\n---\n\n" + output
+prompt = os.environ["SMEVALS_CHECK_RUBRIC"] + "\n\n---\n\n" + output
 result = subprocess.run(
-    ["llm", "-m", os.environ["SMEVAL_CHECK_MODEL"], "--schema",
+    ["llm", "-m", os.environ["SMEVALS_CHECK_MODEL"], "--schema",
      json.dumps(SCHEMA), prompt],
     capture_output=True,
     text=True,

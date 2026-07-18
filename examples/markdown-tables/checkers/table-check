@@ -2,7 +2,7 @@
 """Deterministic markdown-table checker.
 
 Parses the markdown table out of the Run's output, parses the task's
-CSV (from $SMEVAL_TASK_CSV) with the csv module, and compares cell by
+CSV (from $SMEVALS_TASK_CSV) with the csv module, and compares cell by
 cell. Structure problems and content mismatches are reported through
 metrics and tags; the score is the fraction of expected cells that
 appear correctly.
@@ -17,10 +17,10 @@ import sys
 
 expected = [
     row
-    for row in csv.reader(io.StringIO(os.environ["SMEVAL_TASK_CSV"]))
+    for row in csv.reader(io.StringIO(os.environ["SMEVALS_TASK_CSV"]))
     if row
 ]
-raw = (pathlib.Path(os.environ["SMEVAL_RUN_DIR"]) / "output.txt").read_text()
+raw = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
 
 lines = [line for line in raw.strip().splitlines()]
 table_lines = [
