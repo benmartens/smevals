@@ -372,9 +372,15 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
                 check, run_dir, grade_dir, grader_path.parent, task
             )
         info = normalize_check_info(info)
-        if ok and check.get("creates") and not (grade_dir / check["creates"]).exists():
-            ok = False
-            info["notes"] = f"did not create promised file {check['creates']}"
+        promised = check.get("creates")
+        if ok and promised:
+            names = [promised] if isinstance(promised, str) else promised
+            missing = [name for name in names if not (grade_dir / name).exists()]
+            if missing:
+                ok = False
+                info["notes"] = (
+                    "did not create promised file(s): " + ", ".join(missing)
+                )
         # normalize_check_info guarantees info can't clobber core keys
         results.append({"checker": name, "ok": ok} | info)
         if not ok and check.get("required"):
