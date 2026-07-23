@@ -378,9 +378,7 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
             missing = [name for name in names if not (grade_dir / name).exists()]
             if missing:
                 ok = False
-                info["notes"] = (
-                    "did not create promised file(s): " + ", ".join(missing)
-                )
+                info["notes"] = "did not create promised file(s): " + ", ".join(missing)
         # normalize_check_info guarantees info can't clobber core keys
         results.append({"checker": name, "ok": ok} | info)
         if not ok and check.get("required"):
