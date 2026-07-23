@@ -3,6 +3,8 @@ name = "smevals"
 version = "0.2.0"
 description = "A framework for running evals against small (and large) models"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Simon Willison" }
 ]

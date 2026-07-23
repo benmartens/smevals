@@ -1,5 +1,7 @@
 # smevals
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/mit)
+
 A framework for running evals against small (and large) models
 
 ## Installation
