@@ -393,7 +393,8 @@ function renderEval(slug) {
         ${tagsHTML(slug, rows, grader)}
         <section><h2>What was tested</h2>${
           info.tasks.map(t => `
-            <div class="task-item"><b>${esc(t.name)}</b>${t.prompt
+            <div class="task-item"><b><a href="#/${enc(slug)}/task/${
+              enc(t.name)}${graderQuery(slug)}">${esc(t.name)}</a></b>${t.prompt
               ? `<div class="prompt">${esc(t.prompt)}</div>`
               : `<div class="prompt">${esc(Object.entries(t)
                    .filter(([k]) => k !== "name")
@@ -406,6 +407,55 @@ function renderEval(slug) {
       <div>${feedsHTML(slug, rows, grader)}</div>
     </div>
     ${galleryHTML(slug, rows, grader, 8)}`;
+}
+
+function renderTask(slug, taskName) {
+  const data = state.data[slug];
+  const grader = currentGrader(slug);
+  const rows = data.rows.filter(r => r.task === taskName);
+  const groups = groupRows(rows, grader);
+  const graded = rows.filter(r => gradeOf(r, grader).graded).length;
+  const runItem = r => {
+    const grade = gradeOf(r, grader);
+    const failed = grade.outcome === "fail" || r.exit_code !== 0;
+    const label = grade.score != null ? grade.score.toFixed(2)
+      : (grade.outcome ?? (r.exit_code === 0 ? "ungraded" : "run failed"));
+    return `<a class="feed-item" href="#/${enc(slug)}/run/${r.run}">
+      <span class="when-wide">${esc((r.started ?? "")
+        .slice(0, 16).replace("T", " ") || "?")}</span>
+      <span class="what">${ago(r.started)}</span>
+      <span class="${failed ? "fail" : (grade.outcome === "pass" ? "ok" : "")}">${
+        esc(String(label))}</span>
+    </a>`;
+  };
+  const byGroup = groups.map(g => `
+    <div class="task-item"><b>${esc(g.model)}</b>
+      <span class="sub">(${esc(g.config)})</span>${g.rows
+      .slice().sort((a, b) => (a.started ?? "").localeCompare(b.started ?? ""))
+      .map(runItem).join("")}</div>`).join("");
+  document.getElementById("view").innerHTML = `
+    <div class="crumb"><a href="#/${enc(slug)}${graderQuery(slug)}">← ${esc(data.eval.name)}</a>
+      / task: ${esc(taskName)}</div>
+    <div class="grid">
+      <div>
+        <section>
+          <h2>${esc(taskName)}</h2>
+          <div class="facts" style="margin-bottom:10px">
+            <span><b>${plural(rows.length, "run")}</b></span>
+            <span><b>${graded}</b> graded</span>
+            ${graderPickerHTML(slug)}
+          </div>
+          ${taskDetailHTML(data.eval.tasks.find(t => t.name === taskName))}
+        </section>
+        <section><h2>Leaderboard (this task)</h2>${
+          leaderboardHTML(slug, groups)}</section>
+      </div>
+      <div>
+        <section><h2>Runs and grades</h2>${byGroup ||
+          `<div class="empty">No runs for this task yet.</div>`}</section>
+      </div>
+    </div>
+    ${galleryHTML(slug, rows, grader, 0)}`;
 }
 
 function renderTag(slug, tag) {
@@ -488,7 +538,8 @@ function renderModel(slug, config, model) {
       }).join("")}
     </section>
     <section><h2>Runs by task</h2>${Object.entries(tasks).map(([task, trs]) => `
-      <div class="task-item"><b>${esc(task)}</b>${trs
+      <div class="task-item"><b><a href="#/${enc(slug)}/task/${
+        enc(task)}${graderQuery(slug)}">${esc(task)}</a></b>${trs
         .slice().sort((a, b) => (a.started ?? "").localeCompare(b.started ?? ""))
         .map(r => {
           const grade = gradeOf(r, grader);
@@ -561,7 +612,7 @@ async function renderRun(slug, runPath) {
     <div class="crumb">
       <a href="#/${enc(slug)}">← ${esc(data.eval.name)}</a> /
       <a href="#/${enc(slug)}/model/${enc(row.config)}/${enc(row.model)}">${esc(row.model)}</a> /
-      ${esc(row.task)}
+      <a href="#/${enc(slug)}/task/${enc(row.task)}">${esc(row.task)}</a>
     </div>
     <div class="grid">
     <div>
@@ -677,6 +728,9 @@ async function route() {
   if (section === "gallery") return renderGallery(slug);
   if (section === "tag") {
     return renderTag(slug, decodeURIComponent(rest[0] ?? ""));
+  }
+  if (section === "task") {
+    return renderTask(slug, decodeURIComponent(rest[0] ?? ""));
   }
   return renderEval(slug);
 }
