@@ -152,6 +152,18 @@ def normalize_check_info(info):
     help="Task(s) to run, defaults to every task in the eval",
 )
 @click.option(
+    "-n",
+    "--repeat",
+    "repeat",
+    type=click.IntRange(min=1),
+    default=None,
+    metavar="N",
+    help="Ensure at least N Runs are recorded per task/model pair, "
+    "executing only the shortfall - re-running the same command is a "
+    "no-op once every pair has N Runs. Without -n, exactly one new "
+    "Run is executed per pair.",
+)
+@click.option(
     "-g",
     "--grader",
     "grader_name",
@@ -162,7 +174,7 @@ def normalize_check_info(info):
     "grader named 'default'",
 )
 @runs_dir_option
-def run(eval_path, models, config_name, tasks, grader_name, runs_dir):
+def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
     "Execute the Tasks in an Eval, recording each Run"
     eval_doc = load_eval(eval_path)
     runs_root = resolve_runs_root(eval_path, eval_doc, runs_dir)
@@ -199,20 +211,47 @@ def run(eval_path, models, config_name, tasks, grader_name, runs_dir):
         raise click.ClickException(f"No tasks found in {eval_path / 'tasks'}")
 
     models = list(models) or [config["model"]]
+    task_docs = [load_yaml(task_file) for task_file in task_files]
+
+    # New Runs each task/model pair still needs: exactly one without -n,
+    # otherwise the shortfall against the target sample size
+    remaining = {}
+    for task in task_docs:
+        for model in models:
+            if repeat is None:
+                remaining[(task["name"], model)] = 1
+                continue
+            existing = count_existing_runs(runs_root, task["name"], config_name, model)
+            remaining[(task["name"], model)] = max(0, repeat - existing)
+            if existing >= repeat:
+                click.echo(
+                    f"{task['name']} / {config_name} / {model}: "
+                    f"already have {existing} run(s)"
+                )
 
     failures = grade_failures = 0
-    for task_file in task_files:
-        task = load_yaml(task_file)
-        for model in models:
-            ok, run_dir = execute_run(runs_root, task, config_name, runner, model)
-            failures += not ok
-            if grader:
-                grade_dir = run_dir / "grades" / grader_name
-                record = grade_run(run_dir, grade_dir, grader, grader_path)
-                grade_failures += record["outcome"] != "pass"
-                score = record["score"]
-                score_display = "" if score is None else f" score={score}"
-                click.echo(f"    grade: {record['outcome']}{score_display}")
+    # Repeat index outermost: full passes over every pair, so an
+    # interrupted session leaves balanced samples across tasks and models
+    while any(remaining.values()):
+        for task in task_docs:
+            for model in models:
+                if not remaining[(task["name"], model)]:
+                    continue
+                remaining[(task["name"], model)] -= 1
+                ok, run_dir = execute_run(runs_root, task, config_name, runner, model)
+                failures += not ok
+                if grader:
+                    # A failed Run is a harness error, not evidence - there
+                    # is nothing meaningful to grade
+                    if not ok:
+                        click.echo("    grade: skipped (run failed)")
+                        continue
+                    grade_dir = run_dir / "grades" / grader_name
+                    record = grade_run(run_dir, grade_dir, grader, grader_path)
+                    grade_failures += record["outcome"] != "pass"
+                    score = record["score"]
+                    score_display = "" if score is None else f" score={score}"
+                    click.echo(f"    grade: {record['outcome']}{score_display}")
     problems = []
     if failures:
         problems.append(f"{failures} run(s) failed")
@@ -220,6 +259,20 @@ def run(eval_path, models, config_name, tasks, grader_name, runs_dir):
         problems.append(f"{grade_failures} run(s) graded as fail")
     if problems:
         raise click.ClickException(", ".join(problems))
+
+
+def run_failed(run):
+    "A failed Run is one whose Runner exited non-zero: a harness error"
+    # Missing exit_code (e.g. imported runs) is treated as success
+    return (run.get("exit_code") or 0) != 0
+
+
+def count_existing_runs(runs_root, task_name, config_name, model):
+    "Successful Runs already recorded for one task/config/model combination"
+    parent = runs_root / task_name / config_name / slugify(model)
+    return sum(
+        1 for p in parent.glob("*/run.yaml") if not run_failed(load_yaml(p))
+    )
 
 
 def execute_run(runs_root, task, config_name, runner, model):
@@ -309,9 +362,13 @@ def grade(eval_path, grader_name, regrade, runs_dir):
     if not run_files:
         raise click.ClickException(f"No runs found in {runs_root}")
 
-    graded = skipped = stale = failures = 0
+    graded = skipped = stale = failures = failed_runs = 0
     for run_file in run_files:
         run_dir = run_file.parent
+        # A failed Run is a harness error, not evidence - never grade it
+        if run_failed(load_yaml(run_file)):
+            failed_runs += 1
+            continue
         grade_dir = run_dir / "grades" / grader_name
         if (grade_dir / "grade.yaml").exists() and not regrade:
             if grade_matches_grader(grade_dir, grader):
@@ -329,6 +386,8 @@ def grade(eval_path, grader_name, regrade, runs_dir):
 
     if skipped:
         click.echo(f"Skipped {skipped} up-to-date grade(s)")
+    if failed_runs:
+        click.echo(f"Skipped {failed_runs} failed run(s)")
     if stale:
         click.echo(
             f"{stale} existing grade(s) came from an older version of "
@@ -589,7 +648,7 @@ def report(eval_path, grader_name, by_task, as_json, runs_dir):
     grader_path, grader = load_grader(eval_path, grader_name)
     grader_version = hashlib.sha256(grader_path.read_bytes()).hexdigest()[:7]
 
-    rows, ungraded, stale = collect_grade_rows(runs_root, grader_name, grader)
+    rows, ungraded, stale, failed = collect_grade_rows(runs_root, grader_name, grader)
     if not rows:
         raise click.ClickException(
             f"No grades from grader {grader_name!r} found in {runs_root}"
@@ -601,6 +660,7 @@ def report(eval_path, grader_name, by_task, as_json, runs_dir):
                     "eval": eval_doc.get("name") or eval_path.name,
                     "grader": grader_name,
                     "grader_version": grader_version,
+                    "excluded_failed_runs": failed,
                     "rows": rows,
                 },
                 indent=2,
@@ -616,6 +676,8 @@ def report(eval_path, grader_name, by_task, as_json, runs_dir):
         f"- Graded: {len(rows)} runs ({fails} failed, {ungraded} ungraded)",
         f"- Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
     ]
+    if failed:
+        lines.append(f"- Excluded: {failed} run(s) (runner failed)")
     if stale:
         lines.append(
             f"- ⚠ {stale} of {len(rows)} grades came from an older version "
@@ -628,17 +690,22 @@ def report(eval_path, grader_name, by_task, as_json, runs_dir):
 
 
 def collect_grade_rows(runs_root, grader_name, grader):
-    "One row per Grade, plus counts of ungraded runs and stale grades"
+    "One row per Grade, plus counts of ungraded, stale and failed runs"
     rows = []
-    ungraded = stale = 0
+    ungraded = stale = failed = 0
     for run_file in sorted(runs_root.rglob("run.yaml")):
         run_dir = run_file.parent
+        run = load_yaml(run_file)
+        # Failed Runs are harness errors, not evidence: excluded from the
+        # stats even if a Grade was recorded against one in the past
+        if run_failed(run):
+            failed += 1
+            continue
         grade_file = run_dir / "grades" / grader_name / "grade.yaml"
         if not grade_file.exists():
             ungraded += 1
             continue
         stale += not grade_matches_grader(grade_file.parent, grader)
-        run = load_yaml(run_file)
         grade = load_yaml(grade_file)
         task = run.get("task")
         metrics = {}
@@ -656,7 +723,7 @@ def collect_grade_rows(runs_root, grader_name, grader):
                 "run_dir": str(run_dir),
             }
         )
-    return rows, ungraded, stale
+    return rows, ungraded, stale, failed
 
 
 def mean_stderr(values):

@@ -164,3 +164,21 @@ def test_report_without_grades_errors(invoke, make_eval):
     write_run(eval_dir / "runs")
     result = invoke("report", eval_dir, expect_exit=1)
     assert "No grades from grader 'default'" in result.output
+
+
+def test_failed_runs_excluded_from_report(invoke, make_eval):
+    eval_dir, grader_doc = reported_eval(make_eval)
+    runs_root = eval_dir / "runs"
+    write_grade(write_run(runs_root), grader_doc, score=1.0)
+    failed = write_run(runs_root, exit_code=1, output="")
+    # Even a grade recorded against a failed run (e.g. graded before the
+    # runner failure was noticed) is excluded from the stats
+    write_grade(failed, grader_doc, outcome="fail", score=0.0)
+    result = invoke("report", eval_dir)
+    assert "Excluded: 1 run(s) (runner failed)" in result.output
+    assert "Graded: 1 runs (0 failed, 0 ungraded)" in result.output
+
+    as_json = invoke("report", eval_dir, "--json")
+    doc = json.loads(as_json.output)
+    assert len(doc["rows"]) == 1
+    assert doc["excluded_failed_runs"] == 1

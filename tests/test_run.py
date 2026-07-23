@@ -158,3 +158,89 @@ def test_same_second_runs_get_numeric_suffix(invoke, make_eval, monkeypatch):
     invoke("run", eval_dir)
     names = sorted(d.name for d in run_dirs(eval_dir))
     assert names == ["2026-01-01T00-00-00Z", "2026-01-01T00-00-00Z-2"]
+
+
+# --- -n/--repeat: target sample size -------------------------------------
+
+
+def test_repeat_tops_up_to_target(invoke, make_eval):
+    eval_dir = make_eval()
+    invoke("run", eval_dir)  # one pre-existing run
+    invoke("run", eval_dir, "-n", "3")
+    assert len(run_dirs(eval_dir)) == 3
+
+
+def test_repeat_is_idempotent(invoke, make_eval):
+    eval_dir = make_eval()
+    invoke("run", eval_dir, "-n", "3")
+    assert len(run_dirs(eval_dir)) == 3
+    result = invoke("run", eval_dir, "-n", "3")
+    assert len(run_dirs(eval_dir)) == 3
+    assert "already have 3 run(s)" in result.output
+
+
+def test_failed_runs_do_not_count_toward_target(invoke, make_eval, tmp_path):
+    # A Run whose Runner exited non-zero is a harness failure, not
+    # evidence - re-running the command executes replacements for it
+    flag = tmp_path / "api-is-back"
+    runner = f'#!/bin/sh\n[ -e "{flag}" ] || exit 7\necho hello\n'
+    eval_dir = make_eval(runner=runner)
+    invoke("run", eval_dir, "-n", "2", expect_exit=1)
+    # Bounded: the shortfall is attempted once per invocation, no retry loop
+    assert len(run_dirs(eval_dir)) == 2
+    flag.write_text("")
+    invoke("run", eval_dir, "-n", "2")
+    dirs = run_dirs(eval_dir)
+    assert len(dirs) == 4  # the failed runs stay on disk, untouched
+    good = [d for d in dirs if read_yaml(d / "run.yaml")["exit_code"] == 0]
+    assert len(good) == 2
+    result = invoke("run", eval_dir, "-n", "2")  # target met by good runs
+    assert "already have 2 run(s)" in result.output
+    assert len(run_dirs(eval_dir)) == 4
+
+
+def test_grade_flag_skips_failed_runs(invoke, make_eval):
+    eval_dir = make_eval(runner="#!/bin/sh\necho oops\nexit 1\n")
+    result = invoke("run", eval_dir, "-g", expect_exit=1)
+    assert "grade: skipped (run failed)" in result.output
+    assert "graded as fail" not in result.output
+    assert not (run_dirs(eval_dir)[0] / "grades").exists()
+
+
+def test_repeat_counts_per_model(invoke, make_eval):
+    eval_dir = make_eval()
+    invoke("run", eval_dir, "-m", "m-a", "-n", "2")
+    invoke("run", eval_dir, "-m", "m-a", "-m", "m-b", "-n", "2")
+    by_model = {}
+    for d in run_dirs(eval_dir):
+        model = d.relative_to(eval_dir / "runs").parts[2]
+        by_model[model] = by_model.get(model, 0) + 1
+    assert by_model == {"m-a": 2, "m-b": 2}
+
+
+def test_repeat_with_grade_only_grades_new_runs(invoke, make_eval):
+    eval_dir = make_eval()
+    invoke("run", eval_dir)  # existing, left ungraded
+    invoke("run", eval_dir, "-n", "2", "-g")
+    dirs = run_dirs(eval_dir)
+    graded = [d for d in dirs if (d / "grades" / "default" / "grade.yaml").exists()]
+    assert len(dirs) == 2
+    assert len(graded) == 1
+
+
+def test_repeat_runs_in_full_passes(invoke, make_eval, tmp_path):
+    # Repeat index outermost: pass over every task, then repeat - so an
+    # interrupted session leaves balanced samples, not 3 of one task
+    log = tmp_path / "order.log"
+    runner = f'#!/bin/sh\necho "$SMEVALS_TASK" >> {log}\necho hello\n'
+    eval_dir = make_eval(
+        tasks={"aa": {"prompt": "x"}, "bb": {"prompt": "y"}}, runner=runner
+    )
+    invoke("run", eval_dir, "-n", "2")
+    assert log.read_text().splitlines() == ["aa", "bb", "aa", "bb"]
+
+
+def test_repeat_must_be_at_least_one(invoke, make_eval):
+    eval_dir = make_eval()
+    result = invoke("run", eval_dir, "-n", "0", expect_exit=2)
+    assert "Invalid value" in result.output

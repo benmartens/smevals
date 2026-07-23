@@ -425,3 +425,17 @@ def test_grade_with_no_runs_errors(invoke, make_eval):
     eval_dir = make_eval()
     result = invoke("grade", eval_dir, expect_exit=1)
     assert "No runs found" in result.output
+
+
+def test_grade_skips_failed_runs(invoke, make_eval, tmp_path):
+    flag = tmp_path / "api-is-back"
+    runner = f'#!/bin/sh\n[ -e "{flag}" ] || exit 7\necho hello\n'
+    eval_dir = make_eval(runner=runner)
+    invoke("run", eval_dir, expect_exit=1)  # failed run
+    flag.write_text("")
+    invoke("run", eval_dir)  # good run
+    result = invoke("grade", eval_dir)
+    assert "Skipped 1 failed run(s)" in result.output
+    graded = [d for d in run_dirs(eval_dir) if (d / "grades").exists()]
+    assert len(graded) == 1
+    assert read_yaml(graded[0] / "run.yaml")["exit_code"] == 0

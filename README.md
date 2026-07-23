@@ -24,7 +24,9 @@ A **Config** describes the setup used to attempt Tasks. It specifies a model and
 
 To gather evidence, we create a **Run**. A Run is the immutable record of executing one Task against one Config using a **Runner**. A Runner is a reusable CLI program that may send prompts directly to a model or build on an agent harness such as Codex or Pi.
 
-The same Task and Config can be executed multiple times, producing multiple Runs to help account for non-deterministic results. Each Run includes a timestamp to help track these.
+The same Task and Config can be executed multiple times, producing multiple Runs to help account for non-deterministic results - `smevals run -n 5` tops each Task up to five Runs. Each Run includes a timestamp to help track these.
+
+A Run whose Runner exits non-zero is a **failed Run**: a harness-level error such as a network failure, not evidence about the model. Failed Runs stay on disk for debugging but are never graded, are excluded from reports, and do not count towards `-n` targets.
 
 Once we have gathered Runs, we apply a **Grader** to each Run to produce a **Grade**. A Grader is a configured sequence of **Checks**, plus rules for combining their results into that Grade.
 
@@ -132,6 +134,7 @@ To run the eval, grade it and then view the results:
 ```bash
 smevals run my-eval -g                 # run every task, grade as each finishes
 smevals run my-eval -m gpt-4.1-nano -m gemini-2.5-flash -g   # more models
+smevals run my-eval -n 5 -g            # top every task up to five graded runs
 smevals report my-eval                 # markdown report in the terminal
 smevals serve my-eval                  # live web UI on http://127.0.0.1:7001
 ```
@@ -150,7 +153,7 @@ The working directory is the Run's directory. The contract:
 
 - Standard output is captured as the Run's `output.txt` - it should be the model's response.
 - Standard error is captured as `stderr.txt`.
-- A non-zero exit code marks the Run as failed.
+- A non-zero exit code marks the Run as **failed**. A failed Run is a harness error - a network drop, a crashed tool - not evidence about the model, so it is never graded, is excluded from reports, and does not count towards an `-n` target (re-running the same command executes a replacement). Exit non-zero only for infrastructure problems; exit 0 whenever the output is a real model response you want judged, however bad.
 - Any other files the Runner writes to its working directory are kept as Run artifacts (the `log.json` in the example above).
 
 A Runner that drives an agent harness instead of a plain model call follows the same contract: assemble whatever inputs the Task's keys describe, run the harness, print the final result to standard output.
@@ -248,22 +251,24 @@ By default `runs/` lives inside the Eval directory. Pass `--runs-dir DIR` to `ru
 ## Commands
 
 ```
-smevals run EVAL [-m MODEL]... [-c CONFIG] [-t TASK]... [-g [GRADER]] [--runs-dir DIR]
+smevals run EVAL [-m MODEL]... [-c CONFIG] [-t TASK]... [-n N] [-g [GRADER]] [--runs-dir DIR]
 ```
 
 Executes every Task (or just those named with `-t`) against every model given with `-m` (default: the Config's model), using the Config named by `-c` (default: `default`). `-g` grades each Run the moment it finishes; `-g NAME` uses that Grader, bare `-g` uses `default`. Exits non-zero if any Run fails or grades as fail.
+
+`-n N` is a target sample size: each task/model pair is topped up to at least N successful Runs, executing only the shortfall, so re-running the same command is a no-op once the target is met and an interrupted session can be resumed by repeating it. Runs execute in full passes over the pairs - interrupting partway leaves balanced samples rather than many Runs of the first Task and none of the last. Failed Runs (a non-zero Runner exit) do not count toward the target: re-running the command executes replacements for them, attempting each pair's shortfall once per invocation, so a persistently failing Runner never retries in a loop. Without `-n`, exactly one new Run is executed per pair.
 
 ```
 smevals grade EVAL [-g GRADER] [--regrade] [--runs-dir DIR]
 ```
 
-Applies the Grader to every ungraded Run. `--regrade` discards and redoes existing Grades from this Grader.
+Applies the Grader to every ungraded Run. Failed Runs are skipped - a harness error is not evidence worth grading. `--regrade` discards and redoes existing Grades from this Grader.
 
 ```
 smevals report EVAL [-g GRADER] [--by-task] [--json] [--runs-dir DIR]
 ```
 
-Prints a markdown report: leaderboard of config × model with mean ± stderr scores and failure counts, tag shares, and per-model blocks with metrics. `--by-task` adds per-task scores. `--json` emits the raw grade rows instead.
+Prints a markdown report: leaderboard of config × model with mean ± stderr scores and failure counts, tag shares, and per-model blocks with metrics. Failed Runs are excluded from all statistics; the header reports how many were left out. `--by-task` adds per-task scores. `--json` emits the raw grade rows instead.
 
 ```
 smevals serve EVAL_OR_SUITE... [-p PORT] [--host HOST] [-g GRADER]
