@@ -186,7 +186,7 @@ def run_server(evals, grader_name, host, port):
             if tail.startswith("runs/"):
                 runs_root = (eval_path / "runs").resolve()
                 target = (eval_path / tail).resolve()
-                if str(target).startswith(str(runs_root)) and target.is_file():
+                if target.is_relative_to(runs_root) and target.is_file():
                     # YAML and unknown types render inline, not download
                     if target.suffix in (".yaml", ".yml"):
                         ctype = "text/plain; charset=utf-8"

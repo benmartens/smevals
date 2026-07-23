@@ -209,6 +209,17 @@ def test_serve_run_artifacts_with_inline_yaml(server):
     assert body == b"hello world\n"
 
 
+def test_serve_refuses_prefix_sibling_of_runs(server):
+    # A sibling dir whose name merely starts with "runs" must not be
+    # reachable - a string-prefix containment check would let it through
+    get, eval_dir = server
+    secret = eval_dir / "runs-secret" / "secret.txt"
+    secret.parent.mkdir()
+    secret.write_text("do not serve me")
+    status, _, _ = get("/evals/demo/runs/../runs-secret/secret.txt")
+    assert status == 404
+
+
 def test_serve_refuses_paths_outside_runs(server):
     get, eval_dir = server
     # http.client sends the path verbatim - no client-side normalization
