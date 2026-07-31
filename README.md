@@ -79,13 +79,24 @@ An Eval also needs at least one Config, defined in `configs/*.yaml`. If there is
 
 `my-eval/configs/default.yaml` - the Config named `default` is used when no `-c` option is passed to `smevals run`.
 
-`runner` specifies a path to an executable program relative to this file:
+`runner` specifies the command that attempts each Task. It can be a path to an executable relative to this file, a command string with arguments, or a YAML list used as the argv verbatim:
 
 ```yaml
 name: default
 runner: ../run-llm
 model: gpt-4.1-mini
 ```
+
+Commands whose first word is not a local file are looked up on `PATH`, which is how published, reusable Runners are used - this Config needs no scripts in the Eval at all:
+
+```yaml
+name: default
+runner: ["uvx", "--with", "llm-anthropic", "smevals-llm"]
+model: claude-haiku-4.5
+system: You are terse.
+```
+
+Every key in the Config is passed to the Runner via `SMEVALS_CONFIG` (JSON) and `SMEVALS_CONFIG_<KEY>` environment variables, so a reusable Runner like [smevals-llm](https://pypi.org/project/smevals-llm/) can honor `system:` and model options without any per-Eval code.
 
 Here's that Runner script:
 
@@ -147,6 +158,7 @@ smevals serve my-eval                  # live web UI on http://127.0.0.1:7001
 - `SMEVALS_TASK` - the Task's name.
 - `SMEVALS_PROMPT` - the Task's `prompt`, only set if the Task has one.
 - `SMEVALS_TASK_<KEY>` - every scalar key of the Task, uppercased: a Task with `submission: mutant-003` provides `SMEVALS_TASK_SUBMISSION=mutant-003`.
+- `SMEVALS_CONFIG` - the full Config as JSON, and `SMEVALS_CONFIG_<KEY>` for every scalar key - so Runners can honor settings like `system:` without parsing YAML. `SMEVALS_MODEL` is authoritative when the two disagree (the `-m` option overrides the Config's model).
 - `SMEVALS_RUN_DIR` - absolute path to the Run's directory.
 
 The working directory is the Run's directory. The contract:
@@ -157,6 +169,12 @@ The working directory is the Run's directory. The contract:
 - Any other files the Runner writes to its working directory are kept as Run artifacts (the `log.json` in the example above).
 
 A Runner that drives an agent harness instead of a plain model call follows the same contract: assemble whatever inputs the Task's keys describe, run the harness, print the final result to standard output.
+
+### Reusable Runners and tokens.json
+
+Because the contract is just environment variables and stdout, Runners can be published as installable packages and shared between Evals - [smevals-llm](https://pypi.org/project/smevals-llm/) prompts any model LLM knows about. Reference one with a command list, declaring any needed plugins inline: `runner: ["uvx", "--with", "llm-anthropic", "smevals-llm"]`.
+
+One optional artifact name has a reserved meaning: a Runner may write `tokens.json` recording usage as `{"input": N, "output": N, "cached_input": N, "details": {...}}` - totals across every API call the Run made, with `details` holding the raw provider usage. Token counts are immutable facts about the Run; pricing them is a reporting concern for later.
 
 ## Graders
 
@@ -182,7 +200,7 @@ scoring:
 
 Each entry in `checks` names a Checker plus its configuration. Reserved keys:
 
-- `checker` - a built-in name, or a path to an executable relative to the Grader file.
+- `checker` - a built-in name, or a command resolved exactly like `runner:` - a path to an executable relative to the Grader file, a command string, or a YAML argv list.
 - `required` - if true and the Check fails, grading halts and the remaining Checks are recorded as skipped.
 - `creates` - a filename, or list of filenames, the Checker promises to create in the shared workspace; the Check fails if any of them do not appear. A Checker may write any number of additional files beyond those promised - everything in the workspace is kept as a Grade artifact.
 

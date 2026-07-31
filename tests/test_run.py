@@ -26,7 +26,7 @@ def test_run_records_output_and_run_yaml(invoke, make_eval):
     assert record["task"] == {"name": "first", "prompt": "Say hello"}
     assert record["config"]["name"] == "default"
     assert record["config"]["model"] == "test-model"
-    assert record["config"]["runner"].endswith("run-llm")
+    assert record["config"]["runner"][0].endswith("run-llm")  # recorded as argv
     assert record["exit_code"] == 0
     assert isinstance(record["duration_seconds"], float)
     datetime.fromisoformat(record["started"])  # parseable timestamp
@@ -244,3 +244,66 @@ def test_repeat_must_be_at_least_one(invoke, make_eval):
     eval_dir = make_eval()
     result = invoke("run", eval_dir, "-n", "0", expect_exit=2)
     assert "Invalid value" in result.output
+
+
+# --- runner: as command strings and argv lists ---------------------------
+
+import json
+
+
+def test_runner_command_string_with_args(invoke, make_eval):
+    eval_dir = make_eval(
+        configs={"default": {"runner": "printf hello-from-args", "model": "m"}}
+    )
+    invoke("run", eval_dir)
+    run_dir = run_dirs(eval_dir)[0]
+    assert (run_dir / "output.txt").read_text() == "hello-from-args"
+    recorded = read_yaml(run_dir / "run.yaml")["config"]["runner"]
+    assert recorded[0].endswith("printf")  # argv[0] resolved via PATH
+    assert recorded[1] == "hello-from-args"
+
+
+def test_runner_command_list(invoke, make_eval):
+    eval_dir = make_eval(
+        configs={"default": {"runner": ["printf", "%s-%s", "a", "b"], "model": "m"}}
+    )
+    invoke("run", eval_dir)
+    assert (run_dirs(eval_dir)[0] / "output.txt").read_text() == "a-b"
+
+
+def test_runner_relative_path_with_args(invoke, make_eval):
+    eval_dir = make_eval(
+        configs={"default": {"runner": ["../run-llm", "world"], "model": "m"}},
+        runner='#!/bin/sh\necho "arg:$1"\n',
+    )
+    invoke("run", eval_dir)
+    assert (run_dirs(eval_dir)[0] / "output.txt").read_text() == "arg:world\n"
+
+
+def test_runner_command_not_found(invoke, make_eval):
+    eval_dir = make_eval(
+        configs={"default": {"runner": "no-such-cmd-xyz", "model": "m"}}
+    )
+    result = invoke("run", eval_dir, expect_exit=1)
+    assert "not found on PATH" in result.output
+    assert not (eval_dir / "runs").exists()
+
+
+def test_config_passed_as_env_vars(invoke, make_eval):
+    runner = """\
+#!/bin/sh
+printf '%s\\n' "$SMEVALS_CONFIG_SYSTEM"
+printf '%s\\n' "$SMEVALS_CONFIG"
+"""
+    eval_dir = make_eval(
+        runner=runner,
+        configs={
+            "default": {"runner": "../run-llm", "model": "m", "system": "Be brief"}
+        },
+    )
+    invoke("run", eval_dir)
+    first, second = (run_dirs(eval_dir)[0] / "output.txt").read_text().splitlines()
+    assert first == "Be brief"
+    config = json.loads(second)
+    assert config["system"] == "Be brief"
+    assert config["model"] == "m"

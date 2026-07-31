@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import statistics
 import subprocess
@@ -193,9 +194,7 @@ def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
         )
     config = load_yaml(config_path)
 
-    runner = (config_path.parent / config["runner"]).resolve()
-    if not (runner.is_file() and os.access(runner, os.X_OK)):
-        raise click.ClickException(f"Runner {runner} is not an executable file")
+    runner_argv = resolve_command(config["runner"], config_path.parent, "Runner")
 
     task_files = sorted((eval_path / "tasks").glob("*.yaml"))
     if tasks:
@@ -238,7 +237,9 @@ def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
                 if not remaining[(task["name"], model)]:
                     continue
                 remaining[(task["name"], model)] -= 1
-                ok, run_dir = execute_run(runs_root, task, config_name, runner, model)
+                ok, run_dir = execute_run(
+                    runs_root, task, config_name, runner_argv, model, config
+                )
                 failures += not ok
                 if grader:
                     # A failed Run is a harness error, not evidence - there
@@ -261,6 +262,31 @@ def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
         raise click.ClickException(", ".join(problems))
 
 
+def resolve_command(value, base_dir, kind):
+    """Resolve a runner: or checker: reference into an argv list.
+
+    A YAML list is the argv verbatim; a string is shlex-split. argv[0]
+    resolves relative to base_dir when it names a local file (or looks
+    like a path), otherwise it is looked up on PATH - so evals can name
+    installed reusable Runners like ["uvx", "smevals-llm"].
+    """
+    argv = shlex.split(value) if isinstance(value, str) else [str(v) for v in value]
+    if not argv:
+        raise click.ClickException(f"{kind} command is empty")
+    head = argv[0]
+    local = (base_dir / head).resolve()
+    if local.is_file() or "/" in head:
+        if not (local.is_file() and os.access(local, os.X_OK)):
+            raise click.ClickException(f"{kind} {local} is not an executable file")
+        argv[0] = str(local)
+    else:
+        found = shutil.which(head)
+        if not found:
+            raise click.ClickException(f"{kind} command {head!r} not found on PATH")
+        argv[0] = found
+    return argv
+
+
 def run_failed(run):
     "A failed Run is one whose Runner exited non-zero: a harness error"
     # Missing exit_code (e.g. imported runs) is treated as success
@@ -275,7 +301,7 @@ def count_existing_runs(runs_root, task_name, config_name, model):
     )
 
 
-def execute_run(runs_root, task, config_name, runner, model):
+def execute_run(runs_root, task, config_name, runner_argv, model, config):
     "Execute a single Run and record it, returning (ok, run_dir)"
     started = datetime.now(timezone.utc)
     timestamp = started.strftime("%Y-%m-%dT%H-%M-%SZ")
@@ -292,9 +318,11 @@ def execute_run(runs_root, task, config_name, runner, model):
     env = (
         os.environ
         | scalar_env_vars("SMEVALS_TASK_", task)
+        | scalar_env_vars("SMEVALS_CONFIG_", config)
         | {
             "SMEVALS_MODEL": model,
             "SMEVALS_TASK": task["name"],
+            "SMEVALS_CONFIG": json.dumps(config),
             "SMEVALS_RUN_DIR": str(run_dir.resolve()),
         }
     )
@@ -303,7 +331,7 @@ def execute_run(runs_root, task, config_name, runner, model):
         env["SMEVALS_PROMPT"] = task["prompt"]
     t0 = time.monotonic()
     result = subprocess.run(
-        [str(runner)], cwd=run_dir, env=env, capture_output=True, text=True
+        runner_argv, cwd=run_dir, env=env, capture_output=True, text=True
     )
     duration = time.monotonic() - t0
 
@@ -316,7 +344,7 @@ def execute_run(runs_root, task, config_name, runner, model):
         "task": task,
         "config": {
             "name": config_name,
-            "runner": str(runner),
+            "runner": runner_argv,
             "model": model,
         },
         "started": started.isoformat(),
@@ -424,7 +452,7 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
         if halted:
             results.append({"checker": name, "skipped": True})
             continue
-        if name in BUILTIN_CHECKERS:
+        if isinstance(name, str) and name in BUILTIN_CHECKERS:
             ok, info = BUILTIN_CHECKERS[name](check, run_dir, grade_dir)
         else:
             ok, info = execute_checker_program(
@@ -480,10 +508,12 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
 
 def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     "Run a CLI Checker, returning (ok, extra result fields)"
-    checker = (grader_dir / check["checker"]).resolve()
-    if not (checker.is_file() and os.access(checker, os.X_OK)):
-        return False, {"notes": f"Checker {checker} is not an executable file"}
-    # Absolute path: checkers run with cwd set to the grade workspace.
+    try:
+        argv = resolve_command(check["checker"], grader_dir, "Checker")
+    except click.ClickException as ex:
+        # A missing checker fails the Check, it does not crash grading
+        return False, {"notes": ex.format_message()}
+    # Absolute argv[0]: checkers run with cwd set to the grade workspace.
     # Scalar check and task keys become individual env vars, for shell scripts.
     env = (
         os.environ
@@ -499,7 +529,7 @@ def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     if task_name:
         env["SMEVALS_TASK"] = task_name
     result = subprocess.run(
-        [str(checker)], cwd=grade_dir, env=env, capture_output=True, text=True
+        argv, cwd=grade_dir, env=env, capture_output=True, text=True
     )
     ok = result.returncode == 0
     info = {}

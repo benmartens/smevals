@@ -439,3 +439,43 @@ def test_grade_skips_failed_runs(invoke, make_eval, tmp_path):
     graded = [d for d in run_dirs(eval_dir) if (d / "grades").exists()]
     assert len(graded) == 1
     assert read_yaml(graded[0] / "run.yaml")["exit_code"] == 0
+
+
+# --- checker: as command strings and argv lists --------------------------
+
+
+def test_checker_command_list_and_string(invoke, make_eval):
+    grade = graded(
+        invoke,
+        make_eval,
+        {
+            "checks": [
+                {"checker": ["printf", '{"score": 0.5}']},
+                {"checker": "printf plain-words"},
+            ]
+        },
+    )
+    assert grade["checks"][0]["score"] == 0.5
+    assert grade["checks"][1]["details"] == {"output": "plain-words"}
+    assert grade["score"] == 0.5
+
+
+def test_checker_relative_path_with_args(invoke, make_eval):
+    arg_emit = '#!/bin/sh\nprintf \'{"score": %s}\' "$1"\n'
+    grade = graded(
+        invoke,
+        make_eval,
+        {"checks": [{"checker": ["../checkers/emit-arg", "0.75"]}]},
+        checkers={"emit-arg": arg_emit},
+    )
+    assert grade["score"] == 0.75
+
+
+def test_checker_command_not_found_fails_check(invoke, make_eval):
+    grade = graded(
+        invoke,
+        make_eval,
+        {"checks": [{"checker": "no-such-checker-xyz"}]},
+        expect_exit=1,
+    )
+    assert "not found on PATH" in grade["checks"][0]["notes"]
