@@ -1,6 +1,9 @@
 # smevals
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/mit)
+[![PyPI](https://img.shields.io/pypi/v/smevals.svg)](https://pypi.org/project/smevals/)
+[![Changelog](https://img.shields.io/github/v/release/prime-radiant-inc/smevals?include_prereleases&label=changelog)](https://github.com/prime-radiant-inc/smevals/releases)
+[![Tests](https://github.com/prime-radiant-inc/smevals/workflows/Test/badge.svg)](https://github.com/prime-radiant-inc/smevals/actions?query=workflow%3ATest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/prime-radiant-inc/smevals/blob/main/LICENSE)
 
 A framework for running evals against small (and large) models
 
