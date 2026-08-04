@@ -1,0 +1,10 @@
+name: svg-only
+checks:
+  - checker: ../checkers/extract-svg
+    creates: extracted.svg
+    required: true
+  - checker: xml-valid
+    file: extracted.svg
+    required: true
+scoring:
+  pass_threshold: 1.0

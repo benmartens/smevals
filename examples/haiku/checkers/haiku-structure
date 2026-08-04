@@ -9,7 +9,9 @@ import os
 import pathlib
 import sys
 
-raw = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
+raw = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text(
+    encoding="utf-8"
+)
 # Tolerate surrounding blank lines and code fences
 lines = [
     line for line in raw.strip().splitlines() if line.strip() and line.strip() != "```"

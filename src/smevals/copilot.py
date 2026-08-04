@@ -95,9 +95,41 @@ def run(environ=None):
     except OSError as ex:
         raise CopilotRunnerError(f"could not start Copilot CLI: {ex}") from ex
 
-    sys.stdout.write(decode_output(result.stdout))
+    stdout = decode_output(result.stdout)
     sys.stderr.write(decode_output(result.stderr))
+    if stdout:
+        try:
+            response = extract_final_response(stdout)
+        except CopilotRunnerError as ex:
+            if result.returncode == 0:
+                raise
+            print(f"smevals-copilot: {ex}", file=sys.stderr)
+            response = ""
+        sys.stdout.write(response)
     return result.returncode
+
+
+def extract_final_response(output):
+    response = None
+    for line_number, line in enumerate(output.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError as ex:
+            raise CopilotRunnerError(
+                f"Copilot JSON output line {line_number} is invalid: {ex}"
+            ) from ex
+        if event.get("type") != "assistant.message":
+            continue
+        content = (event.get("data") or {}).get("content")
+        if isinstance(content, str):
+            response = content
+    if response is None:
+        raise CopilotRunnerError(
+            "Copilot completed without an assistant.message response"
+        )
+    return response
 
 
 def parse_options(value):
@@ -181,7 +213,7 @@ def build_command(executable, prompt, model, options, cwd):
         "-p",
         prompt,
         "-s",
-        "--output-format=text",
+        "--output-format=json",
         "--stream=off",
         "--no-color",
         "--no-ask-user",

@@ -11,7 +11,9 @@ import pathlib
 import subprocess
 import sys
 
-output = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
+output = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text(
+    encoding="utf-8"
+)
 
 allowed_tags = json.loads(os.environ["SMEVALS_CHECK"]).get("tags")
 if allowed_tags:

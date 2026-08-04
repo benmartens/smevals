@@ -10,12 +10,22 @@ import pathlib
 import re
 import sys
 
-text = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
+text = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text(
+    encoding="utf-8"
+)
 # First <svg through last </svg> - forgiving of fenced code blocks
 # and surrounding prose; strict validation happens in later checks
 match = re.search(r"<svg.*</svg>", text, re.DOTALL)
 if not match:
     sys.exit("No <svg>...</svg> block found in output.txt")
 target = os.environ.get("SMEVALS_CHECK_CREATES", "extracted.svg")
-pathlib.Path(target).write_text(match.group(0))
-print(json.dumps({"notes": f"extracted {len(match.group(0))} bytes of SVG"}))
+pathlib.Path(target).write_text(match.group(0), encoding="utf-8")
+print(
+    json.dumps(
+        {
+            "score": 1.0,
+            "metrics": {"svg_extracted": True},
+            "notes": f"extracted {len(match.group(0))} bytes of SVG",
+        }
+    )
+)

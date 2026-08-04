@@ -9,6 +9,7 @@ import smevals.copilot
 from smevals.copilot import (
     CopilotRunnerError,
     build_command,
+    extract_final_response,
     parse_options,
     prepare_workspace,
     run,
@@ -38,6 +39,15 @@ def env_for(tmp_path, copilot=None, **extra):
     } | extra
 
 
+def copilot_events(content):
+    return (
+        json.dumps({"type": "assistant.message", "data": {"content": content}})
+        + "\n"
+        + json.dumps({"type": "result", "exitCode": 0})
+        + "\n"
+    ).encode("utf-8")
+
+
 def test_default_options_are_restricted():
     options = parse_options(None)
     command = build_command(
@@ -47,6 +57,7 @@ def test_default_options_are_restricted():
     assert options.permissions == "prompt"
     assert "--allow-all" not in command
     assert not any(arg.startswith("--allow-tool") for arg in command)
+    assert "--output-format=json" in command
     assert "--no-custom-instructions" in command
     assert "--disable-builtin-mcps" in command
     assert "--no-remote-export" in command
@@ -83,6 +94,29 @@ def test_unrestricted_profile_is_explicit():
         "copilot", "hello", "gpt-5-mini", options, Path("workspace")
     )
     assert "--allow-all" in command
+
+
+def test_extract_final_response_preserves_raw_markdown():
+    output = "\n".join(
+        [
+            json.dumps({"type": "assistant.message", "data": {"content": "working"}}),
+            json.dumps({"type": "tool.execution_complete", "data": {}}),
+            json.dumps(
+                {
+                    "type": "assistant.message",
+                    "data": {"content": "| a | b |\n|---|---|\n| 1 | 2 |"},
+                }
+            ),
+        ]
+    )
+    assert extract_final_response(output) == "| a | b |\n|---|---|\n| 1 | 2 |"
+
+
+def test_extract_final_response_requires_json_assistant_message():
+    with pytest.raises(CopilotRunnerError, match="without an assistant.message"):
+        extract_final_response(json.dumps({"type": "result", "exitCode": 0}))
+    with pytest.raises(CopilotRunnerError, match="line 1 is invalid"):
+        extract_final_response("not-json")
 
 
 @pytest.mark.parametrize(
@@ -140,7 +174,7 @@ def test_run_uses_copied_workspace_as_cwd(tmp_path, monkeypatch):
 
     def fake_run(command, **kwargs):
         captured.update(kwargs)
-        return subprocess.CompletedProcess(command, 0, b"done\n", b"")
+        return subprocess.CompletedProcess(command, 0, copilot_events("done\n"), b"")
 
     monkeypatch.setattr(smevals.copilot.subprocess, "run", fake_run)
 
@@ -213,7 +247,12 @@ def test_run_invokes_copilot_with_clean_environment(tmp_path, monkeypatch, capsy
     def fake_run(command, **kwargs):
         captured["command"] = command
         captured.update(kwargs)
-        return subprocess.CompletedProcess(command, 0, "final answer\n", "diagnostic\n")
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            copilot_events("final answer\n"),
+            b"diagnostic\n",
+        )
 
     monkeypatch.setattr(smevals.copilot.subprocess, "run", fake_run)
 
@@ -245,6 +284,22 @@ def test_run_propagates_copilot_exit_code(tmp_path, monkeypatch):
         lambda command, **kwargs: subprocess.CompletedProcess(command, 7, "", "failed"),
     )
     assert run(env) == 7
+
+
+def test_failed_run_reports_missing_final_response(tmp_path, monkeypatch, capsys):
+    env = env_for(tmp_path)
+    monkeypatch.setattr(smevals.copilot.shutil, "which", lambda name: "copilot.exe")
+    stdout = (json.dumps({"type": "result", "exitCode": 7}) + "\n").encode("utf-8")
+    monkeypatch.setattr(
+        smevals.copilot.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(
+            command, 7, stdout, b""
+        ),
+    )
+
+    assert run(env) == 7
+    assert "without an assistant.message" in capsys.readouterr().err
 
 
 def test_run_requires_installed_copilot(tmp_path, monkeypatch):

@@ -1,0 +1,7 @@
+name: copilot
+runner: smevals-copilot
+model: gpt-5-mini
+copilot:
+  permissions: prompt
+  effort: low
+  max_ai_credits: 30

@@ -20,7 +20,9 @@ expected = [
     for row in csv.reader(io.StringIO(os.environ["SMEVALS_TASK_CSV"]))
     if row
 ]
-raw = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text()
+raw = (pathlib.Path(os.environ["SMEVALS_RUN_DIR"]) / "output.txt").read_text(
+    encoding="utf-8"
+)
 
 lines = [line for line in raw.strip().splitlines()]
 table_lines = [

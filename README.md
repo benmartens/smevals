@@ -188,7 +188,13 @@ copilot:
   max_ai_credits: 30
 ```
 
-The Runner uses Copilot's non-interactive prompt mode and writes only the final response to stdout. For repeatable, local evaluation it disables custom instructions, the built-in GitHub MCP server, remote control/export, automatic updates and automatic temp-directory access by default. It also prevents `COPILOT_ALLOW_ALL` inherited from the parent shell from silently widening permissions.
+The Runner uses Copilot's non-interactive JSON output and extracts the final
+`assistant.message`, preserving raw Markdown, SVG and other formatting instead
+of terminal-rendered text. It writes only that final response to stdout. For
+repeatable, local evaluation it disables custom instructions, the built-in
+GitHub MCP server, remote control/export, automatic updates and automatic
+temp-directory access by default. It also prevents `COPILOT_ALLOW_ALL`
+inherited from the parent shell from silently widening permissions.
 
 ### Permission profiles
 
@@ -241,6 +247,18 @@ Two runnable examples are in `examples/copilot`:
 smevals run examples\copilot\prompt-response -g
 smevals run examples\copilot\agentic-file-fix -g
 ```
+
+The examples inherited from upstream have matching Copilot configs too:
+
+```powershell
+smevals run examples\haiku -c copilot -g
+smevals run examples\markdown-tables -c copilot -g
+smevals run examples\pelican-riding-a-bicycle -c copilot -g svg-only
+```
+
+The pelican `svg-only` grader extracts and validates the SVG on Windows. Its
+original `default` grader remains available when `rsvg-convert` and the `llm`
+CLI are installed for raster rendering and vision-model scoring.
 
 Copilot runs consume AI credits. `-n N` starts enough independent Copilot sessions to reach `N` successful Runs for every task/model pair, so set `max_ai_credits` and begin with a small sample.
 
