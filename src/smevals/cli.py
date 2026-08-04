@@ -352,7 +352,11 @@ def execute_run(
 
     ok = result.returncode == 0
     status = "ok" if ok else f"FAILED (exit {result.returncode})"
-    relative = os.path.relpath(run_dir)
+    try:
+        relative = os.path.relpath(run_dir)
+    except ValueError:
+        # Windows temp directories and the checkout can be on different drives.
+        relative = str(run_dir)
     display = relative if len(relative) < len(str(run_dir)) else str(run_dir)
     click.echo(f"{status} ({duration:.1f}s) -> {display}")
     return ok, run_dir

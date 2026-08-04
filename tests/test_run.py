@@ -216,6 +216,17 @@ def test_same_second_runs_get_numeric_suffix(invoke, make_eval, monkeypatch):
     assert names == ["2026-01-01T00-00-00Z", "2026-01-01T00-00-00Z-2"]
 
 
+def test_run_display_handles_paths_on_another_drive(invoke, make_eval, monkeypatch):
+    def different_drive(path):
+        raise ValueError("path is on another drive")
+
+    monkeypatch.setattr(smevals.cli.os.path, "relpath", different_drive)
+    eval_dir = make_eval()
+    result = invoke("run", eval_dir)
+
+    assert str(run_dirs(eval_dir)[0]) in result.output
+
+
 # --- -n/--repeat: target sample size -------------------------------------
 
 
