@@ -1,4 +1,4 @@
-# Copilot CLI examples
+# Examples
 
 These Evals use the `smevals-copilot` Runner installed with smevals.
 
@@ -11,13 +11,13 @@ copilot login
 Run the prompt-response example:
 
 ```powershell
-smevals run examples\copilot\prompt-response -g
+smevals run examples\prompt-response -g
 ```
 
 Run the isolated agentic example:
 
 ```powershell
-smevals run examples\copilot\agentic-file-fix -g
+smevals run examples\agentic-file-fix -g
 ```
 
 The agentic task copies its fixture into each Run's `workspace` directory.

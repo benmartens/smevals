@@ -241,11 +241,11 @@ prompt: Edit status.txt so its only line is COPILOT_SMEVALS_FIXED.
 
 The Runner validates the path, rejects traversal and symlinks, and copies the fixture to `runs/.../<timestamp>/workspace`. Copilot runs from that copy, so the checked-in fixture remains immutable and the modified files are retained as Run artifacts for deterministic Checkers.
 
-Two runnable examples are in `examples/copilot`:
+Two Copilot-specific examples are available alongside the upstream examples:
 
 ```powershell
-smevals run examples\copilot\prompt-response -g
-smevals run examples\copilot\agentic-file-fix -g
+smevals run examples\prompt-response -g
+smevals run examples\agentic-file-fix -g
 ```
 
 The examples inherited from upstream have matching Copilot configs too:
