@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import statistics
-import subprocess
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -13,6 +12,9 @@ from pathlib import Path
 
 import click
 import yaml
+
+from .programs import ProgramError, resolve_program, run_program
+from .text import configure_utf8_stdio, read_text, write_text
 
 
 @click.group()
@@ -32,6 +34,7 @@ def cli():
       smevals report examples/my-eval
       smevals serve examples/
     """
+    configure_utf8_stdio()
 
 
 @cli.command()
@@ -48,7 +51,7 @@ def slugify(text):
 
 
 def load_yaml(path):
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load(read_text(path))
 
 
 def load_eval(eval_path):
@@ -193,9 +196,10 @@ def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
         )
     config = load_yaml(config_path)
 
-    runner = (config_path.parent / config["runner"]).resolve()
-    if not (runner.is_file() and os.access(runner, os.X_OK)):
-        raise click.ClickException(f"Runner {runner} is not an executable file")
+    try:
+        runner = resolve_program(config.get("runner"), config_path.parent)
+    except ProgramError as ex:
+        raise click.ClickException(f"Runner {ex}") from ex
 
     task_files = sorted((eval_path / "tasks").glob("*.yaml"))
     if tasks:
@@ -238,7 +242,16 @@ def run(eval_path, models, config_name, tasks, repeat, grader_name, runs_dir):
                 if not remaining[(task["name"], model)]:
                     continue
                 remaining[(task["name"], model)] -= 1
-                ok, run_dir = execute_run(runs_root, task, config_name, runner, model)
+                ok, run_dir = execute_run(
+                    runs_root,
+                    eval_path,
+                    config_path,
+                    task,
+                    config_name,
+                    config,
+                    runner,
+                    model,
+                )
                 failures += not ok
                 if grader:
                     # A failed Run is a harness error, not evidence - there
@@ -275,7 +288,16 @@ def count_existing_runs(runs_root, task_name, config_name, model):
     )
 
 
-def execute_run(runs_root, task, config_name, runner, model):
+def execute_run(
+    runs_root,
+    eval_path,
+    config_path,
+    task,
+    config_name,
+    config,
+    runner,
+    model,
+):
     "Execute a single Run and record it, returning (ok, run_dir)"
     started = datetime.now(timezone.utc)
     timestamp = started.strftime("%Y-%m-%dT%H-%M-%SZ")
@@ -289,10 +311,19 @@ def execute_run(runs_root, task, config_name, runner, model):
     run_dir.mkdir(parents=True)
 
     click.echo(f"{task['name']} / {config_name} / {model} ... ", nl=False)
+    resolved_config = config | {
+        "name": config_name,
+        "runner": runner.display,
+        "model": model,
+    }
     env = (
         os.environ
         | scalar_env_vars("SMEVALS_TASK_", task)
+        | scalar_env_vars("SMEVALS_CONFIG_", resolved_config)
         | {
+            "SMEVALS_CONFIG": json.dumps(resolved_config, default=str),
+            "SMEVALS_CONFIG_DIR": str(config_path.parent.resolve()),
+            "SMEVALS_EVAL_DIR": str(eval_path.resolve()),
             "SMEVALS_MODEL": model,
             "SMEVALS_TASK": task["name"],
             "SMEVALS_RUN_DIR": str(run_dir.resolve()),
@@ -302,28 +333,22 @@ def execute_run(runs_root, task, config_name, runner, model):
     if "prompt" in task:
         env["SMEVALS_PROMPT"] = task["prompt"]
     t0 = time.monotonic()
-    result = subprocess.run(
-        [str(runner)], cwd=run_dir, env=env, capture_output=True, text=True
-    )
+    result = run_program(runner, cwd=run_dir, env=env)
     duration = time.monotonic() - t0
 
-    (run_dir / "output.txt").write_text(result.stdout)
+    write_text(run_dir / "output.txt", result.stdout)
     if result.stderr:
-        (run_dir / "stderr.txt").write_text(result.stderr)
+        write_text(run_dir / "stderr.txt", result.stderr)
     # run.yaml is written last: its presence marks a complete Run.
     # The full task is embedded so the Run stays self-describing.
     record = {
         "task": task,
-        "config": {
-            "name": config_name,
-            "runner": str(runner),
-            "model": model,
-        },
+        "config": resolved_config,
         "started": started.isoformat(),
         "duration_seconds": round(duration, 2),
         "exit_code": result.returncode,
     }
-    (run_dir / "run.yaml").write_text(yaml.safe_dump(record, sort_keys=False))
+    write_text(run_dir / "run.yaml", yaml.safe_dump(record, sort_keys=False))
 
     ok = result.returncode == 0
     status = "ok" if ok else f"FAILED (exit {result.returncode})"
@@ -403,7 +428,7 @@ def grade_matches_grader(grade_dir, grader):
     if not snapshot.exists():
         return False
     # Parsed comparison: comment and formatting edits don't count
-    return yaml.safe_load(snapshot.read_text()) == grader
+    return yaml.safe_load(read_text(snapshot)) == grader
 
 
 def grade_run(run_dir, grade_dir, grader, grader_path):
@@ -414,7 +439,7 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
     grade_dir.mkdir(parents=True)
     # Snapshot the grader spec so each Grade records exactly how it
     # was produced, even after the grader is later edited
-    (grade_dir / "grader.yaml").write_text(grader_path.read_text())
+    write_text(grade_dir / "grader.yaml", read_text(grader_path))
     # Older run.yaml files recorded just the task name, newer the full task
     task = load_yaml(run_dir / "run.yaml").get("task")
     results = []
@@ -474,15 +499,16 @@ def grade_run(run_dir, grade_dir, grader, grader_path):
         "tags": sorted({t for r in results for t in r.get("tags", [])}),
         "checks": results,
     }
-    (grade_dir / "grade.yaml").write_text(yaml.safe_dump(record, sort_keys=False))
+    write_text(grade_dir / "grade.yaml", yaml.safe_dump(record, sort_keys=False))
     return record
 
 
 def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     "Run a CLI Checker, returning (ok, extra result fields)"
-    checker = (grader_dir / check["checker"]).resolve()
-    if not (checker.is_file() and os.access(checker, os.X_OK)):
-        return False, {"notes": f"Checker {checker} is not an executable file"}
+    try:
+        checker = resolve_program(check.get("checker"), grader_dir)
+    except ProgramError as ex:
+        return False, {"notes": f"Checker {ex}"}
     # Absolute path: checkers run with cwd set to the grade workspace.
     # Scalar check and task keys become individual env vars, for shell scripts.
     env = (
@@ -498,9 +524,7 @@ def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
     task_name = task.get("name") if isinstance(task, dict) else task
     if task_name:
         env["SMEVALS_TASK"] = task_name
-    result = subprocess.run(
-        [str(checker)], cwd=grade_dir, env=env, capture_output=True, text=True
-    )
+    result = run_program(checker, cwd=grade_dir, env=env)
     ok = result.returncode == 0
     info = {}
     if result.stdout.strip():
@@ -516,7 +540,7 @@ def execute_checker_program(check, run_dir, grade_dir, grader_dir, task):
 def check_contains(check, run_dir, grade_dir):
     "Built-in: does the Run output contain a string?"
     value = check["value"]
-    if value in (run_dir / "output.txt").read_text():
+    if value in read_text(run_dir / "output.txt"):
         return True, {}
     return False, {"notes": f"output.txt does not contain {value!r}"}
 

@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 smevals = "smevals.cli:cli"
+smevals-copilot = "smevals.copilot:main"
 
 [build-system]
 requires = ["uv_build>=0.11.0,<0.12.0"]

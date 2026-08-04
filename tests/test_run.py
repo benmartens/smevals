@@ -1,9 +1,13 @@
 """Tests for `smevals run` and the Runner contract."""
 
+import json
+import os
 from datetime import datetime, timezone
 
+import pytest
 import smevals.cli
-from conftest import read_yaml, run_dirs
+from conftest import python_script, read_yaml, run_dirs
+from smevals.text import read_text, write_text
 
 
 def test_run_records_output_and_run_yaml(invoke, make_eval):
@@ -19,7 +23,7 @@ def test_run_records_output_and_run_yaml(invoke, make_eval):
         "default",
         "test-model",
     )
-    assert (run_dir / "output.txt").read_text() == "model=test-model\nSay hello\n"
+    assert read_text(run_dir / "output.txt") == "model=test-model\nSay hello\n"
     assert not (run_dir / "stderr.txt").exists()
 
     record = read_yaml(run_dir / "run.yaml")
@@ -34,33 +38,46 @@ def test_run_records_output_and_run_yaml(invoke, make_eval):
 
 
 def test_prompt_env_only_set_when_task_has_one(invoke, make_eval):
-    runner = """\
-#!/bin/sh
-printf '%s\\n' "${SMEVALS_PROMPT-unset}"
-printf '%s\\n' "$SMEVALS_TASK_PAYLOAD"
-printf '%s\\n' "$SMEVALS_TASK"
-"""
+    runner = python_script("""\
+        import os
+
+        print(os.environ.get("SMEVALS_PROMPT", "unset"))
+        print(os.environ["SMEVALS_TASK_PAYLOAD"])
+        print(os.environ["SMEVALS_TASK"])
+        """)
     eval_dir = make_eval(tasks={"data-task": {"payload": "abc"}}, runner=runner)
     invoke("run", eval_dir)
-    output = (run_dirs(eval_dir)[0] / "output.txt").read_text()
+    output = read_text(run_dirs(eval_dir)[0] / "output.txt")
     assert output == "unset\nabc\ndata-task\n"
 
 
 def test_stderr_captured_when_present(invoke, make_eval):
-    eval_dir = make_eval(runner="#!/bin/sh\necho warned >&2\necho hello\n")
+    runner = python_script("""\
+        import sys
+
+        print("warned", file=sys.stderr)
+        print("hello")
+        """)
+    eval_dir = make_eval(runner=runner)
     invoke("run", eval_dir)
-    assert (run_dirs(eval_dir)[0] / "stderr.txt").read_text() == "warned\n"
+    assert read_text(run_dirs(eval_dir)[0] / "stderr.txt") == "warned\n"
 
 
 def test_failing_runner_marks_run_failed_and_exits_nonzero(invoke, make_eval):
-    eval_dir = make_eval(runner="#!/bin/sh\necho partial\nexit 3\n")
+    runner = python_script("""\
+        import sys
+
+        print("partial")
+        sys.exit(3)
+        """)
+    eval_dir = make_eval(runner=runner)
     result = invoke("run", eval_dir, expect_exit=1)
     assert "1 run(s) failed" in result.output
 
     run_dir = run_dirs(eval_dir)[0]
     assert read_yaml(run_dir / "run.yaml")["exit_code"] == 3
     # The run is still recorded, output included
-    assert (run_dir / "output.txt").read_text() == "partial\n"
+    assert read_text(run_dir / "output.txt") == "partial\n"
 
 
 def test_model_options_override_config_and_are_slugified(invoke, make_eval):
@@ -99,11 +116,50 @@ def test_unknown_config_error_lists_available(invoke, make_eval):
     assert "default" in result.output
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows does not use executable bits")
 def test_runner_must_be_executable(invoke, make_eval):
     eval_dir = make_eval(runner=None)
-    (eval_dir / "run-llm").write_text("#!/bin/sh\necho hi\n")  # not chmod +x
+    write_text(eval_dir / "run-llm", "#!/bin/sh\necho hi\n")  # not chmod +x
     result = invoke("run", eval_dir, expect_exit=1)
-    assert "is not an executable file" in result.output
+    assert "is not executable" in result.output
+
+
+def test_config_is_available_to_runner_and_preserved(invoke, make_eval):
+    runner = python_script("""\
+        import json, os
+
+        print(json.dumps({
+            "config": json.loads(os.environ["SMEVALS_CONFIG"]),
+            "temperature": os.environ["SMEVALS_CONFIG_TEMPERATURE"],
+            "config_dir": os.environ["SMEVALS_CONFIG_DIR"],
+            "eval_dir": os.environ["SMEVALS_EVAL_DIR"],
+        }))
+        """)
+    eval_dir = make_eval(
+        runner=runner,
+        configs={
+            "default": {
+                "runner": "../run-llm",
+                "model": "test-model",
+                "temperature": 0.25,
+                "copilot": {"permissions": "prompt"},
+            }
+        },
+    )
+    invoke("run", eval_dir, "-m", "override-model")
+
+    run_dir = run_dirs(eval_dir)[0]
+    payload = json.loads(read_text(run_dir / "output.txt"))
+    assert payload["temperature"] == "0.25"
+    assert payload["config_dir"] == str((eval_dir / "configs").resolve())
+    assert payload["eval_dir"] == str(eval_dir.resolve())
+    assert payload["config"]["copilot"] == {"permissions": "prompt"}
+    assert payload["config"]["model"] == "override-model"
+
+    record = read_yaml(run_dir / "run.yaml")
+    assert record["config"]["temperature"] == 0.25
+    assert record["config"]["copilot"] == {"permissions": "prompt"}
+    assert record["config"]["model"] == "override-model"
 
 
 def test_not_an_eval_error(invoke, tmp_path):
@@ -183,12 +239,18 @@ def test_failed_runs_do_not_count_toward_target(invoke, make_eval, tmp_path):
     # A Run whose Runner exited non-zero is a harness failure, not
     # evidence - re-running the command executes replacements for it
     flag = tmp_path / "api-is-back"
-    runner = f'#!/bin/sh\n[ -e "{flag}" ] || exit 7\necho hello\n'
+    runner = python_script(f"""\
+        import pathlib, sys
+
+        if not pathlib.Path({str(flag)!r}).exists():
+            sys.exit(7)
+        print("hello")
+        """)
     eval_dir = make_eval(runner=runner)
     invoke("run", eval_dir, "-n", "2", expect_exit=1)
     # Bounded: the shortfall is attempted once per invocation, no retry loop
     assert len(run_dirs(eval_dir)) == 2
-    flag.write_text("")
+    write_text(flag, "")
     invoke("run", eval_dir, "-n", "2")
     dirs = run_dirs(eval_dir)
     assert len(dirs) == 4  # the failed runs stay on disk, untouched
@@ -200,7 +262,13 @@ def test_failed_runs_do_not_count_toward_target(invoke, make_eval, tmp_path):
 
 
 def test_grade_flag_skips_failed_runs(invoke, make_eval):
-    eval_dir = make_eval(runner="#!/bin/sh\necho oops\nexit 1\n")
+    runner = python_script("""\
+        import sys
+
+        print("oops")
+        sys.exit(1)
+        """)
+    eval_dir = make_eval(runner=runner)
     result = invoke("run", eval_dir, "-g", expect_exit=1)
     assert "grade: skipped (run failed)" in result.output
     assert "graded as fail" not in result.output
@@ -232,12 +300,20 @@ def test_repeat_runs_in_full_passes(invoke, make_eval, tmp_path):
     # Repeat index outermost: pass over every task, then repeat - so an
     # interrupted session leaves balanced samples, not 3 of one task
     log = tmp_path / "order.log"
-    runner = f'#!/bin/sh\necho "$SMEVALS_TASK" >> {log}\necho hello\n'
+    runner = python_script(f"""\
+        import os, pathlib
+
+        with pathlib.Path({str(log)!r}).open(
+            "a", encoding="utf-8", newline="\\n"
+        ) as fp:
+            fp.write(os.environ["SMEVALS_TASK"] + "\\n")
+        print("hello")
+        """)
     eval_dir = make_eval(
         tasks={"aa": {"prompt": "x"}, "bb": {"prompt": "y"}}, runner=runner
     )
     invoke("run", eval_dir, "-n", "2")
-    assert log.read_text().splitlines() == ["aa", "bb", "aa", "bb"]
+    assert read_text(log).splitlines() == ["aa", "bb", "aa", "bb"]
 
 
 def test_repeat_must_be_at_least_one(invoke, make_eval):

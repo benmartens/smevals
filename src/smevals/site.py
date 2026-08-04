@@ -25,6 +25,8 @@ from pathlib import Path
 
 import yaml
 
+from .text import read_text, write_text
+
 _yaml_cache = {}
 
 
@@ -34,7 +36,7 @@ def cached_yaml(path):
     hit = _yaml_cache.get(key)
     if hit and hit[0] == mtime:
         return hit[1]
-    data = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(read_text(path))
     _yaml_cache[key] = (mtime, data)
     return data
 
@@ -149,7 +151,7 @@ def grader_list(data):
 
 
 def app_html():
-    return (files("smevals") / "app.html").read_text()
+    return (files("smevals") / "app.html").read_text(encoding="utf-8")
 
 
 # --- live server ---------------------------------------------------------
@@ -162,7 +164,7 @@ def run_server(evals, grader_name, host, port):
         def do_GET(self):
             path = self.path.split("?")[0]
             if path in ("/", "/index.html"):
-                self.reply(200, app_html().encode(), "text/html")
+                self.reply(200, app_html().encode("utf-8"), "text/html")
             elif path == "/index.json":
                 entries = [
                     eval_summary(slug, collect_eval(eval_path, grader_name))
@@ -199,7 +201,7 @@ def run_server(evals, grader_name, host, port):
             self.reply(404, b"not found", "text/plain")
 
         def reply_json(self, data):
-            self.reply(200, json.dumps(data).encode(), "application/json")
+            self.reply(200, json.dumps(data).encode("utf-8"), "application/json")
 
         def reply(self, status, body, ctype):
             self.send_response(status)
@@ -227,7 +229,7 @@ def build_eval(eval_path, site_dir, grader_name, slug):
     if eval_dir.exists():
         shutil.rmtree(eval_dir)
     eval_dir.mkdir(parents=True)
-    (eval_dir / "eval.json").write_text(json.dumps(data))
+    write_text(eval_dir / "eval.json", json.dumps(data))
 
     runs_root = eval_path / "runs"
     if runs_root.exists():
@@ -237,14 +239,15 @@ def build_eval(eval_path, site_dir, grader_name, slug):
     entries = []
     if index_file.exists():
         try:
-            entries = json.loads(index_file.read_text()).get("evals", [])
+            entries = json.loads(read_text(index_file)).get("evals", [])
         except json.JSONDecodeError:
             entries = []
     entries = [e for e in entries if e.get("slug") != slug]
     entries.append(eval_summary(slug, data))
     entries.sort(key=lambda e: e["slug"])
-    index_file.write_text(
+    write_text(
+        index_file,
         json.dumps({"evals": entries, "live": False, "generated": now_iso()})
     )
-    (site_dir / "index.html").write_text(app_html())
+    write_text(site_dir / "index.html", app_html())
     return slug, len(data["rows"])

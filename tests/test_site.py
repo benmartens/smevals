@@ -12,6 +12,7 @@ import pytest
 from conftest import read_yaml, write_grade, write_run
 from smevals import site
 from smevals.cli import discover_evals, resolve_eval_slugs
+from smevals.text import read_text
 
 
 def graded_eval(make_eval, tmp_path, name="demo", models=("m-1",), scores=(1.0,)):
@@ -109,12 +110,12 @@ def test_build_creates_self_contained_site(invoke, make_eval, tmp_path):
     site_dir = tmp_path / "site"
     invoke("build", eval_a, eval_b, "-o", site_dir)
 
-    assert (site_dir / "index.html").read_text() == site.app_html()
-    index = json.loads((site_dir / "index.json").read_text())
+    assert read_text(site_dir / "index.html") == site.app_html()
+    index = json.loads(read_text(site_dir / "index.json"))
     assert index["live"] is False
     assert [e["slug"] for e in index["evals"]] == ["alpha", "beta"]
 
-    data = json.loads((site_dir / "evals" / "alpha" / "eval.json").read_text())
+    data = json.loads(read_text(site_dir / "evals" / "alpha" / "eval.json"))
     assert len(data["rows"]) == 1
     # Run artifacts are copied into the site
     copied = site_dir / "evals" / "alpha" / "runs" / data["rows"][0]["run"]
@@ -134,7 +135,7 @@ def test_build_refreshes_one_eval_without_touching_others(invoke, make_eval, tmp
     write_grade(write_run(eval_a / "runs"), grader_doc, score=0.5)
     invoke("build", eval_a, "-o", site_dir)
 
-    index = json.loads((site_dir / "index.json").read_text())
+    index = json.loads(read_text(site_dir / "index.json"))
     by_slug = {e["slug"]: e for e in index["evals"]}
     assert set(by_slug) == {"alpha", "beta"}
     assert by_slug["alpha"]["runs"] == 2

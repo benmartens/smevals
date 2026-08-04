@@ -2,6 +2,7 @@
 contract, scoring rules, and grade skip/stale/regrade behavior."""
 
 from conftest import python_script, read_yaml, run_dirs
+from smevals.text import write_text
 
 # A reusable checker driven entirely by its Check configuration:
 # score: emit that score, tags: emit those tags, exit: exit with that code
@@ -69,12 +70,13 @@ def test_contains_fails_with_notes(invoke, make_eval):
 
 
 def test_xml_valid_against_run_dir_file(invoke, make_eval):
-    runner = """\
-#!/bin/sh
-printf '<a><b/></a>' > doc.xml
-printf '<broken' > bad.xml
-echo hello
-"""
+    runner = python_script("""\
+        import pathlib
+
+        pathlib.Path("doc.xml").write_text("<a><b/></a>", encoding="utf-8")
+        pathlib.Path("bad.xml").write_text("<broken", encoding="utf-8")
+        print("hello")
+        """)
     for file, outcome, note in [
         ("doc.xml", "pass", None),
         ("bad.xml", "fail", "XML parse error"),
@@ -109,7 +111,12 @@ def test_xml_valid_prefers_grade_workspace_over_run_dir(invoke, make_eval):
                 {"checker": "xml-valid", "file": "doc.xml"},
             ]
         },
-        runner="#!/bin/sh\nprintf '<broken' > doc.xml\necho hello\n",
+        runner=python_script("""\
+            import pathlib
+
+            pathlib.Path("doc.xml").write_text("<broken", encoding="utf-8")
+            print("hello")
+            """),
     )
     assert grade["outcome"] == "pass"
     assert [c["ok"] for c in grade["checks"]] == [True, True]
@@ -213,7 +220,7 @@ def test_missing_checker_fails_the_check(invoke, make_eval):
         expect_exit=1,
     )
     assert grade["outcome"] == "fail"
-    assert "is not an executable file" in grade["checks"][0]["notes"]
+    assert "is not a file" in grade["checks"][0]["notes"]
 
 
 # --- required, creates, scoring ------------------------------------------
@@ -429,10 +436,16 @@ def test_grade_with_no_runs_errors(invoke, make_eval):
 
 def test_grade_skips_failed_runs(invoke, make_eval, tmp_path):
     flag = tmp_path / "api-is-back"
-    runner = f'#!/bin/sh\n[ -e "{flag}" ] || exit 7\necho hello\n'
+    runner = python_script(f"""\
+        import pathlib, sys
+
+        if not pathlib.Path({str(flag)!r}).exists():
+            sys.exit(7)
+        print("hello")
+        """)
     eval_dir = make_eval(runner=runner)
     invoke("run", eval_dir, expect_exit=1)  # failed run
-    flag.write_text("")
+    write_text(flag, "")
     invoke("run", eval_dir)  # good run
     result = invoke("grade", eval_dir)
     assert "Skipped 1 failed run(s)" in result.output

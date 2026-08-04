@@ -14,12 +14,7 @@ import yaml
 from click.testing import CliRunner
 
 from smevals.cli import cli, slugify
-
-ECHO_RUNNER = """\
-#!/bin/sh
-printf 'model=%s\\n' "$SMEVALS_MODEL"
-printf '%s\\n' "${SMEVALS_PROMPT-<no prompt>}"
-"""
+from smevals.text import read_text, write_text
 
 
 def python_script(body):
@@ -27,15 +22,23 @@ def python_script(body):
     return f"#!{sys.executable}\n" + textwrap.dedent(body)
 
 
+ECHO_RUNNER = python_script("""\
+    import os
+
+    print(f"model={os.environ['SMEVALS_MODEL']}")
+    print(os.environ.get("SMEVALS_PROMPT", "<no prompt>"))
+    """)
+
+
 def write_executable(path, body):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body)
+    write_text(path, body)
     path.chmod(0o755)
     return path
 
 
 def read_yaml(path):
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load(read_text(path))
 
 
 def run_dirs(root):
@@ -73,7 +76,8 @@ def make_eval(tmp_path):
         (eval_dir / "tasks").mkdir(parents=True)
         (eval_dir / "configs").mkdir()
         (eval_dir / "graders").mkdir()
-        (eval_dir / "eval.yaml").write_text(
+        write_text(
+            eval_dir / "eval.yaml",
             yaml.safe_dump({"name": name, "description": f"The {name} eval"})
         )
         if runner is not None:
@@ -81,13 +85,15 @@ def make_eval(tmp_path):
         if tasks is None:
             tasks = {"first": {"prompt": "Say hello"}}
         for stem, doc in tasks.items():
-            (eval_dir / "tasks" / f"{stem}.yaml").write_text(
+            write_text(
+                eval_dir / "tasks" / f"{stem}.yaml",
                 yaml.safe_dump({"name": stem} | doc)
             )
         if configs is None:
             configs = {"default": {"runner": "../run-llm", "model": "test-model"}}
         for stem, doc in configs.items():
-            (eval_dir / "configs" / f"{stem}.yaml").write_text(
+            write_text(
+                eval_dir / "configs" / f"{stem}.yaml",
                 yaml.safe_dump({"name": stem} | doc)
             )
         if graders is None:
@@ -95,7 +101,8 @@ def make_eval(tmp_path):
                 "default": {"checks": [{"checker": "contains", "value": "hello"}]}
             }
         for stem, doc in graders.items():
-            (eval_dir / "graders" / f"{stem}.yaml").write_text(
+            write_text(
+                eval_dir / "graders" / f"{stem}.yaml",
                 yaml.safe_dump({"name": stem} | doc)
             )
         for rel, body in (checkers or {}).items():
@@ -129,8 +136,9 @@ def write_run(
         / f"2026-01-01T{n // 3600:02d}-{n // 60 % 60:02d}-{n % 60:02d}Z"
     )
     run_dir.mkdir(parents=True)
-    (run_dir / "output.txt").write_text(output)
-    (run_dir / "run.yaml").write_text(
+    write_text(run_dir / "output.txt", output)
+    write_text(
+        run_dir / "run.yaml",
         yaml.safe_dump(
             {
                 "task": {"name": task},
@@ -158,8 +166,9 @@ def write_grade(
     "Fabricate a Grade whose snapshot matches snapshot_doc"
     grade_dir = run_dir / "grades" / grader
     grade_dir.mkdir(parents=True)
-    (grade_dir / "grader.yaml").write_text(yaml.safe_dump(snapshot_doc))
-    (grade_dir / "grade.yaml").write_text(
+    write_text(grade_dir / "grader.yaml", yaml.safe_dump(snapshot_doc))
+    write_text(
+        grade_dir / "grade.yaml",
         yaml.safe_dump(
             {
                 "grader": grader,

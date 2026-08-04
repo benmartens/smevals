@@ -1,11 +1,16 @@
 """Unit tests for the small pure helpers in smevals.cli."""
 
+import os
+
+import pytest
+
 from smevals.cli import (
     normalize_check_info,
     normalize_tag,
     scalar_env_vars,
     slugify,
 )
+from smevals.text import decode_output
 
 
 class TestSlugify:
@@ -87,3 +92,16 @@ class TestNormalizeCheckInfo:
         info = normalize_check_info({"ok": False, "checker": "evil", "skipped": True})
         assert set(info) == {"details"}
         assert info["details"] == {"ok": False, "checker": "evil", "skipped": True}
+
+
+def test_decode_output_accepts_utf8_bytes():
+    assert decode_output("snowman: \u2603".encode("utf-8")) == "snowman: \u2603"
+
+
+def test_decode_output_normalizes_newlines():
+    assert decode_output(b"one\r\ntwo\rthree\n") == "one\ntwo\nthree\n"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows native output encoding")
+def test_decode_output_accepts_windows_1252():
+    assert decode_output(b"em dash: \x97") == "em dash: \u2014"

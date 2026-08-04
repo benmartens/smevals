@@ -25,7 +25,7 @@ An **Eval** is a collection of **Tasks**. These are the individual exercises tha
 
 A **Config** describes the setup used to attempt Tasks. It specifies a model and may include model parameters, system prompts, tools and other settings.
 
-To gather evidence, we create a **Run**. A Run is the immutable record of executing one Task against one Config using a **Runner**. A Runner is a reusable CLI program that may send prompts directly to a model or build on an agent harness such as Codex or Pi.
+To gather evidence, we create a **Run**. A Run is the immutable record of executing one Task against one Config using a **Runner**. A Runner is a reusable CLI program that may send prompts directly to a model or build on an agent harness such as Codex, Pi or GitHub Copilot CLI.
 
 The same Task and Config can be executed multiple times, producing multiple Runs to help account for non-deterministic results - `smevals run -n 5` tops each Task up to five Runs. Each Run includes a timestamp to help track these.
 
@@ -82,7 +82,7 @@ An Eval also needs at least one Config, defined in `configs/*.yaml`. If there is
 
 `my-eval/configs/default.yaml` - the Config named `default` is used when no `-c` option is passed to `smevals run`.
 
-`runner` specifies a path to an executable program relative to this file:
+`runner` specifies a path to an executable program relative to this file, or a command available on `PATH`:
 
 ```yaml
 name: default
@@ -150,16 +150,101 @@ smevals serve my-eval                  # live web UI on http://127.0.0.1:7001
 - `SMEVALS_TASK` - the Task's name.
 - `SMEVALS_PROMPT` - the Task's `prompt`, only set if the Task has one.
 - `SMEVALS_TASK_<KEY>` - every scalar key of the Task, uppercased: a Task with `submission: mutant-003` provides `SMEVALS_TASK_SUBMISSION=mutant-003`.
+- `SMEVALS_CONFIG` - the resolved Config as JSON, including any nested Runner-specific settings and the model selected with `-m`.
+- `SMEVALS_CONFIG_<KEY>` - every scalar key of the resolved Config, uppercased.
+- `SMEVALS_EVAL_DIR` - absolute path to the Eval directory.
+- `SMEVALS_CONFIG_DIR` - absolute path to the selected Config's directory.
 - `SMEVALS_RUN_DIR` - absolute path to the Run's directory.
 
 The working directory is the Run's directory. The contract:
 
 - Standard output is captured as the Run's `output.txt` - it should be the model's response.
 - Standard error is captured as `stderr.txt`.
+- Runner output is decoded and persisted as UTF-8 with LF newlines.
 - A non-zero exit code marks the Run as **failed**. A failed Run is a harness error - a network drop, a crashed tool - not evidence about the model, so it is never graded, is excluded from reports, and does not count towards an `-n` target (re-running the same command executes a replacement). Exit non-zero only for infrastructure problems; exit 0 whenever the output is a real model response you want judged, however bad.
 - Any other files the Runner writes to its working directory are kept as Run artifacts (the `log.json` in the example above).
 
 A Runner that drives an agent harness instead of a plain model call follows the same contract: assemble whatever inputs the Task's keys describe, run the harness, print the final result to standard output.
+
+Relative Runner and Checker files retain their normal executable-bit behavior on macOS and Linux. On Windows, smevals also launches `.exe`, `.com`, `.cmd`, `.bat`, `.ps1` and Python/shebang scripts through the appropriate interpreter. A bare command such as `smevals-copilot` is resolved from `PATH`.
+
+## GitHub Copilot CLI Runner
+
+The package includes a reusable `smevals-copilot` Runner for [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli). Install and authenticate Copilot CLI before running these Evals:
+
+```powershell
+copilot login
+```
+
+Use the Runner from a Config:
+
+```yaml
+name: default
+runner: smevals-copilot
+model: gpt-5-mini
+copilot:
+  permissions: prompt
+  effort: low
+  max_ai_credits: 30
+```
+
+The Runner uses Copilot's non-interactive prompt mode and writes only the final response to stdout. For repeatable, local evaluation it disables custom instructions, the built-in GitHub MCP server, remote control/export, automatic updates and automatic temp-directory access by default. It also prevents `COPILOT_ALLOW_ALL` inherited from the parent shell from silently widening permissions.
+
+### Permission profiles
+
+- `prompt` (default) does not pre-approve tools. Use it for response-only tasks.
+- `workspace` pre-approves Copilot's `read` and `write` tools. File access remains rooted at Copilot's working directory. Shell, URL and MCP access are not pre-approved.
+- `unrestricted` passes `--allow-all`, including unrestricted tools, paths and URLs. Use it only for trusted Evals in a trusted environment.
+
+Add narrowly scoped exceptions when a workspace task needs them:
+
+```yaml
+copilot:
+  permissions: workspace
+  allow_tools:
+    - shell(python:*)
+  deny_tools:
+    - memory
+  allow_urls:
+    - https://example.com
+```
+
+`allow_tools`, `deny_tools` and `allow_urls` use Copilot CLI's normal permission syntax. Shell access is powerful and is not confined by smevals itself; prefer deterministic Checkers to run tests after Copilot finishes instead of granting a shell unless the task genuinely requires one.
+
+Other supported settings:
+
+- `agent`: select a Copilot custom agent.
+- `effort`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh` or `max`.
+- `max_ai_credits`: per-session AI-credit cap; Copilot CLI currently requires at least `30`.
+- `custom_instructions`: enable repository/user instructions (default `false`).
+- `github_mcp`: enable Copilot's built-in GitHub MCP server (default `false`).
+- `share_session`: `true` for `copilot-session.md`, or a filename. Disabled by default because transcripts may contain sensitive content and become Run artifacts.
+- `secret_env_vars`: additional environment-variable names Copilot must redact and remove from tool/MCP environments. GitHub token variable names are included automatically.
+
+Unknown settings and conflicting permission combinations fail before Copilot starts.
+
+### Agentic workspace tasks
+
+Set `copilot_workspace` to a fixture directory relative to the Eval:
+
+```yaml
+name: fix-status
+copilot_workspace: fixtures/simple-fix
+prompt: Edit status.txt so its only line is COPILOT_SMEVALS_FIXED.
+```
+
+The Runner validates the path, rejects traversal and symlinks, and copies the fixture to `runs/.../<timestamp>/workspace`. Copilot runs from that copy, so the checked-in fixture remains immutable and the modified files are retained as Run artifacts for deterministic Checkers.
+
+Two runnable examples are in `examples/copilot`:
+
+```powershell
+smevals run examples\copilot\prompt-response -g
+smevals run examples\copilot\agentic-file-fix -g
+```
+
+Copilot runs consume AI credits. `-n N` starts enough independent Copilot sessions to reach `N` successful Runs for every task/model pair, so set `max_ai_credits` and begin with a small sample.
+
+Eval definitions can execute their configured Runners and Checkers. Treat an Eval repository as trusted code, especially when it enables shell tools, URLs, MCP servers or `permissions: unrestricted`.
 
 ## Graders
 

@@ -1,0 +1,3 @@
+name: copilot-agentic-file-fix
+description: >-
+  An isolated workspace Eval that asks Copilot CLI to repair one text file.

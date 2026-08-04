@@ -1,0 +1,5 @@
+name: fix-status
+copilot_workspace: fixtures/simple-fix
+prompt: >-
+  Edit status.txt so its only line is COPILOT_SMEVALS_FIXED. Do not create,
+  rename, or delete any other files. When the edit is complete, reply briefly.
