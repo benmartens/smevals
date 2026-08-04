@@ -28,6 +28,13 @@ import yaml
 from .text import read_text, write_text
 
 _yaml_cache = {}
+_IGNORED_ARTIFACT_DIRECTORIES = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    "bin",
+    "obj",
+}
 
 
 def cached_yaml(path):
@@ -233,7 +240,11 @@ def build_eval(eval_path, site_dir, grader_name, slug):
 
     runs_root = eval_path / "runs"
     if runs_root.exists():
-        shutil.copytree(runs_root, eval_dir / "runs")
+        shutil.copytree(
+            runs_root,
+            eval_dir / "runs",
+            ignore=_ignore_artifact_directories,
+        )
 
     index_file = site_dir / "index.json"
     entries = []
@@ -251,3 +262,12 @@ def build_eval(eval_path, site_dir, grader_name, slug):
     )
     write_text(site_dir / "index.html", app_html())
     return slug, len(data["rows"])
+
+
+def _ignore_artifact_directories(path, names):
+    return [
+        name
+        for name in names
+        if name in _IGNORED_ARTIFACT_DIRECTORIES
+        and (Path(path) / name).is_dir()
+    ]

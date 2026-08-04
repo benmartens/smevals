@@ -1,0 +1,7 @@
+runs/
+demo/
+benchmark/private/
+fixtures/starter/**/bin/
+fixtures/starter/**/obj/
+fixtures/starter/.vs/
+fixtures/starter/result*.json

@@ -123,6 +123,30 @@ def test_build_creates_self_contained_site(invoke, make_eval, tmp_path):
     assert (copied / "grades" / "default" / "grade.yaml").exists()
 
 
+def test_build_excludes_transient_workspace_directories(
+    invoke, make_eval, tmp_path
+):
+    eval_dir = graded_eval(make_eval, tmp_path)
+    data = site.collect_eval(eval_dir)
+    run_dir = eval_dir / "runs" / data["rows"][0]["run"]
+    workspace = run_dir / "workspace" / "src"
+    (workspace / "bin").mkdir(parents=True)
+    (workspace / "obj").mkdir()
+    (workspace / "bin" / "temporary.dll").write_bytes(b"binary")
+    (workspace / "obj" / "temporary.cache").write_bytes(b"cache")
+    (workspace / "Program.cs").write_text(
+        "class Program {}\n", encoding="utf-8"
+    )
+
+    site_dir = tmp_path / "site"
+    invoke("build", eval_dir, "-o", site_dir)
+
+    copied = site_dir / "evals" / "demo" / "runs" / data["rows"][0]["run"]
+    assert (copied / "workspace" / "src" / "Program.cs").exists()
+    assert not (copied / "workspace" / "src" / "bin").exists()
+    assert not (copied / "workspace" / "src" / "obj").exists()
+
+
 def test_build_refreshes_one_eval_without_touching_others(invoke, make_eval, tmp_path):
     eval_a = graded_eval(make_eval, tmp_path, name="alpha")
     eval_b = graded_eval(make_eval, tmp_path, name="beta")

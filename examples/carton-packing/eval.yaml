@@ -1,0 +1,5 @@
+name: carton-packing
+description: >-
+  Can an agent implement a deterministic 3D carton packing engine that
+  produces valid, well-supported layouts and makes strong value/volume
+  trade-offs?

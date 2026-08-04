@@ -260,6 +260,15 @@ The pelican `svg-only` grader extracts and validates the SVG on Windows. Its
 original `default` grader remains available when `rsvg-convert` and the `llm`
 CLI are installed for raster rendering and vision-model scoring.
 
+For a substantial agentic programming benchmark, `examples/carton-packing`
+contains an incomplete .NET 10 optimization engine, visible tests,
+post-execution hidden-case generation, partial-credit grading, and SVG/source
+artifacts:
+
+```powershell
+examples\carton-packing\benchmark\Run-CartonPackingBenchmark.ps1
+```
+
 Copilot runs consume AI credits. `-n N` starts enough independent Copilot sessions to reach `N` successful Runs for every task/model pair, so set `max_ai_credits` and begin with a small sample.
 
 Eval definitions can execute their configured Runners and Checkers. Treat an Eval repository as trusted code, especially when it enables shell tools, URLs, MCP servers or `permissions: unrestricted`.

@@ -1,0 +1,11 @@
+name: implement-packer
+copilot_workspace: fixtures/starter
+prompt: >-
+  Implement CartonPacker.Pack in the provided .NET 10 solution. Read README.md
+  carefully and preserve the public JSON/CLI contract. The engine must produce
+  deterministic, valid 3D placements while maximizing shipment value and then
+  packed volume. You may modify source files in the workspace, but do not add
+  external packages or network dependencies. Run
+  `dotnet run --project visible-tests\CartonPacking.VisibleTests` until the
+  visible tests pass, and use the supplied validator while developing. When
+  finished, respond with a concise summary of the algorithm and tests run.
