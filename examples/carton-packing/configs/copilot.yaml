@@ -6,4 +6,4 @@ copilot:
   allow_tools:
     - shell(dotnet:*)
   effort: medium
-  max_ai_credits: 60
+  max_ai_credits: 500
