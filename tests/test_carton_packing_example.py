@@ -53,13 +53,13 @@ def test_hidden_cases_are_not_committed_or_copied_to_starter():
     assert list(STARTER.rglob("hidden_cases.json")) == []
 
 
-def test_benchmark_has_thirteen_unique_models():
+def test_benchmark_has_fourteen_unique_models():
     import json
 
     config = json.loads(read_text(EVAL / "benchmark" / "models.json"))
     model_ids = [model["id"] for model in config["models"]]
-    assert len(model_ids) == 13
-    assert len(set(model_ids)) == 13
+    assert len(model_ids) == 14
+    assert len(set(model_ids)) == 14
     assert {
         "gpt-5.6-sol",
         "gpt-5.6-terra",
@@ -67,9 +67,10 @@ def test_benchmark_has_thirteen_unique_models():
         "claude-opus-5",
         "claude-sonnet-5",
         "claude-haiku-4.5",
+        "mai-code-1-flash-picker",
     }.issubset(model_ids)
     enabled = [model for model in config["models"] if model.get("enabled", True)]
-    assert len(enabled) == 12
+    assert len(enabled) == 13
     assert all(model["effort"] in {"high", "xhigh", "max"} for model in enabled)
     haiku = next(
         model for model in config["models"]

@@ -66,6 +66,11 @@
       "id": "grok-4.5",
       "label": "Grok 4.5",
       "effort": "high"
+    },
+    {
+      "id": "mai-code-1-flash-picker",
+      "label": "MAI-Code-1-Flash",
+      "effort": "high"
     }
   ]
 }
