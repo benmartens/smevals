@@ -22,6 +22,8 @@ def test_carton_packing_eval_contract():
     assert config["runner"] == "smevals-copilot"
     assert config["copilot"]["permissions"] == "workspace"
     assert "shell(dotnet:*)" in config["copilot"]["allow_tools"]
+    assert config["copilot"]["effort"] == "high"
+    assert config["copilot"]["max_ai_credits"] == 500
     assert grader["scoring"]["pass_threshold"] == 0.7
     assert grader["checks"][0]["creates"] == [
         "grading-results.json",
@@ -51,13 +53,29 @@ def test_hidden_cases_are_not_committed_or_copied_to_starter():
     assert list(STARTER.rglob("hidden_cases.json")) == []
 
 
-def test_benchmark_has_eight_unique_models():
+def test_benchmark_has_thirteen_unique_models():
     import json
 
     config = json.loads(read_text(EVAL / "benchmark" / "models.json"))
     model_ids = [model["id"] for model in config["models"]]
-    assert len(model_ids) == 8
-    assert len(set(model_ids)) == 8
+    assert len(model_ids) == 13
+    assert len(set(model_ids)) == 13
+    assert {
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-haiku-4.5",
+    }.issubset(model_ids)
+    enabled = [model for model in config["models"] if model.get("enabled", True)]
+    assert len(enabled) == 12
+    assert all(model["effort"] in {"high", "xhigh", "max"} for model in enabled)
+    haiku = next(
+        model for model in config["models"]
+        if model["id"] == "claude-haiku-4.5"
+    )
+    assert haiku["enabled"] is False
 
 
 def test_calibration_separates_floor_only_from_strong_greedy():

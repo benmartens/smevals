@@ -88,6 +88,36 @@ function Test-SuccessfulModelRun {
     return $false
 }
 
+function Write-ModelRunMetadata {
+    param(
+        [Parameter(Mandatory)][string]$RunsRoot,
+        [Parameter(Mandatory)]$Model
+    )
+
+    $modelRoot = Join-Path $RunsRoot (
+        "implement-packer\copilot\$(Get-ModelSlug $Model.id)"
+    )
+    if (-not (Test-Path $modelRoot)) {
+        return
+    }
+    $runFile = Get-ChildItem $modelRoot -Recurse -Filter run.yaml |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $runFile) {
+        return
+    }
+    [ordered]@{
+        model = $Model.id
+        label = $Model.label
+        effort = $Model.effort
+        maxAiCredits = 500
+    } |
+        ConvertTo-Json |
+        Set-Content (
+            Join-Path $runFile.Directory.FullName 'benchmark-model.json'
+        ) -Encoding UTF8
+}
+
 $benchmarkDirectory = $PSScriptRoot
 $evalDirectory = Split-Path $benchmarkDirectory -Parent
 $repoRoot = (Resolve-Path (Join-Path $evalDirectory '..\..')).Path
@@ -117,9 +147,17 @@ if (-not $dotnetVersion.StartsWith('10.')) {
 
 $configuration = Get-Content $ModelsPath -Raw -Encoding UTF8 |
     ConvertFrom-Json
-$models = @($configuration.models)
+$disabledModels = @(
+    $configuration.models | Where-Object { $_.enabled -eq $false }
+)
+$models = @(
+    $configuration.models | Where-Object { $_.enabled -ne $false }
+)
 if ($models.Count -eq 0) {
     throw "No models are configured in $ModelsPath."
+}
+foreach ($model in $disabledModels) {
+    Write-Warning "Disabled model: $($model.id) - $($model.unavailableReason)"
 }
 
 if (-not $BuildOnly) {
@@ -129,13 +167,14 @@ if (-not $BuildOnly) {
         }
     )
     $hiddenBundle = Join-Path $hiddenDirectory 'hidden_cases.json'
-    if ((Test-Path $hiddenBundle) -and $missingRuns.Count -gt 0) {
+    if (-not $PreflightOnly -and (Test-Path $hiddenBundle) -and $missingRuns.Count -gt 0) {
         $missingIds = ($missingRuns | ForEach-Object { $_.id }) -join ', '
         throw "Hidden cases already exist, but these models need new Runs: $missingIds. Archive/remove benchmark\private\hidden before model execution."
     }
 
-    if (-not $SkipModelPreflight -and $missingRuns.Count -gt 0) {
-        foreach ($model in $missingRuns) {
+    $preflightModels = if ($PreflightOnly) { $models } else { $missingRuns }
+    if (-not $SkipModelPreflight -and $preflightModels.Count -gt 0) {
+        foreach ($model in $preflightModels) {
             $slug = Get-ModelSlug $model.id
             Write-Host "Preflight: $($model.label) [$($model.id)]"
             $result = Invoke-ExternalProcess `
@@ -155,6 +194,7 @@ if (-not $BuildOnly) {
                     '--no-custom-instructions',
                     '--disable-builtin-mcps',
                     '--model', $model.id,
+                    '--effort', $model.effort,
                     '--max-ai-credits', '30'
                 ) `
                 -WorkingDirectory $repoRoot `
@@ -174,30 +214,38 @@ if (-not $BuildOnly) {
 
     foreach ($model in $models) {
         if (Test-SuccessfulModelRun $runsDirectory $model.id) {
+            Write-ModelRunMetadata $runsDirectory $model
             Write-Host "Already complete: $($model.label) [$($model.id)]"
             continue
         }
 
         $slug = Get-ModelSlug $model.id
         Write-Host "Running: $($model.label) [$($model.id)]"
-        $result = Invoke-ExternalProcess `
-            -FilePath $smevals `
-            -Arguments @(
-                'run', $evalDirectory,
-                '-c', 'copilot',
-                '-m', $model.id,
-                '-n', '1'
-            ) `
-            -WorkingDirectory $repoRoot `
-            -TimeoutSeconds $ModelTimeoutSeconds `
-            -StdoutPath (Join-Path $logsDirectory "run-$slug.out.log") `
-            -StderrPath (Join-Path $logsDirectory "run-$slug.err.log")
+        $previousEffort = $env:SMEVALS_COPILOT_EFFORT
+        try {
+            $env:SMEVALS_COPILOT_EFFORT = $model.effort
+            $result = Invoke-ExternalProcess `
+                -FilePath $smevals `
+                -Arguments @(
+                    'run', $evalDirectory,
+                    '-c', 'copilot',
+                    '-m', $model.id,
+                    '-n', '1'
+                ) `
+                -WorkingDirectory $repoRoot `
+                -TimeoutSeconds $ModelTimeoutSeconds `
+                -StdoutPath (Join-Path $logsDirectory "run-$slug.out.log") `
+                -StderrPath (Join-Path $logsDirectory "run-$slug.err.log")
+        } finally {
+            $env:SMEVALS_COPILOT_EFFORT = $previousEffort
+        }
 
         if ($result.TimedOut) {
             Write-Warning "Timed out: $($model.id)"
         } elseif ($result.ExitCode -ne 0) {
             Write-Warning "Run failed ($($result.ExitCode)): $($model.id)"
         }
+        Write-ModelRunMetadata $runsDirectory $model
     }
 
     if (-not (Test-Path (Join-Path $hiddenDirectory 'hidden_cases.json'))) {
@@ -219,6 +267,10 @@ if (-not $BuildOnly) {
     } finally {
         $env:CARTON_PACKING_HIDDEN_DIR = $previousHidden
     }
+}
+
+foreach ($model in $models) {
+    Write-ModelRunMetadata $runsDirectory $model
 }
 
 $markdownReport = & $smevals report $evalDirectory -g default

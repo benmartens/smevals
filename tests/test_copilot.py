@@ -8,6 +8,7 @@ import pytest
 import smevals.copilot
 from smevals.copilot import (
     CopilotRunnerError,
+    apply_environment_overrides,
     build_command,
     extract_final_response,
     parse_options,
@@ -94,6 +95,18 @@ def test_unrestricted_profile_is_explicit():
         "copilot", "hello", "gpt-5-mini", options, Path("workspace")
     )
     assert "--allow-all" in command
+
+
+def test_effort_environment_override():
+    options = parse_options({"effort": "low"})
+    overridden = apply_environment_overrides(
+        options, {"SMEVALS_COPILOT_EFFORT": "max"}
+    )
+    assert overridden.effort == "max"
+    with pytest.raises(CopilotRunnerError, match="SMEVALS_COPILOT_EFFORT"):
+        apply_environment_overrides(
+            options, {"SMEVALS_COPILOT_EFFORT": "impossible"}
+        )
 
 
 def test_extract_final_response_preserves_raw_markdown():

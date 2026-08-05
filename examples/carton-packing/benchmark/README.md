@@ -14,6 +14,10 @@ before grading.
 The repository-local `.venv\Scripts` directory is added to `PATH`
 automatically when present.
 
+`models.json` records each model's highest supported reasoning effort.
+Unavailable models may remain listed with `enabled: false` so the intended
+roster is documented without blocking preflight or benchmark execution.
+
 ## Calibrate the scorer
 
 ```powershell

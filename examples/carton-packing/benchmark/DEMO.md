@@ -7,7 +7,7 @@ Before presenting, serve `benchmark\private\site` with
    `CartonPacker.Pack`.
 2. Explain that models can run the visible .NET harness, while the exact
    benchmark cases do not exist yet.
-3. Open the static site's leaderboard.
+3. Open the static site's full model-matrix leaderboard.
 4. Compare `valid_layout_rate`, `average_value_ratio`, support-related tags,
    and total scores.
 5. Open `showcase-layout.svg` for a high-scoring and low-scoring model.

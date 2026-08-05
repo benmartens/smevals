@@ -6,7 +6,8 @@ that packs valued cartons into a 3D container.
 The challenge includes rotations, quantities, maximum weight, upright-only
 cartons, full-base support, and deterministic output. Models can run a visible
 console test harness. Exact hidden scenarios are generated only after every
-model session completes.
+model session completes. The benchmark selects each configured model's highest
+supported reasoning level and uses a 500-credit per-session soft cap.
 
 ## Run one model manually
 

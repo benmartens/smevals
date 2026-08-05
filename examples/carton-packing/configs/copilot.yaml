@@ -5,5 +5,5 @@ copilot:
   permissions: workspace
   allow_tools:
     - shell(dotnet:*)
-  effort: medium
+  effort: high
   max_ai_credits: 500

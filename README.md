@@ -227,6 +227,11 @@ Other supported settings:
 - `share_session`: `true` for `copilot-session.md`, or a filename. Disabled by default because transcripts may contain sensitive content and become Run artifacts.
 - `secret_env_vars`: additional environment-variable names Copilot must redact and remove from tool/MCP environments. GitHub token variable names are included automatically.
 
+Automation can override only the configured reasoning effort for one Runner
+process with `SMEVALS_COPILOT_EFFORT`. The carton-packing benchmark uses this
+to select each model's highest supported level while retaining one clean
+`copilot` config in reports.
+
 Unknown settings and conflicting permission combinations fail before Copilot starts.
 
 ### Agentic workspace tasks

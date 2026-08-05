@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .text import configure_utf8_stdio, decode_output
@@ -69,6 +69,7 @@ def run(environ=None):
     eval_dir = _required_directory(environ, "SMEVALS_EVAL_DIR")
     config = _load_config(environ)
     options = parse_options(config.get("copilot"))
+    options = apply_environment_overrides(options, environ)
 
     workspace = prepare_workspace(environ, eval_dir, run_dir)
     cwd = workspace or run_dir
@@ -205,6 +206,18 @@ def parse_options(value):
             dict.fromkeys((*DEFAULT_SECRET_ENV_VARS, *secret_env_vars))
         ),
     )
+
+
+def apply_environment_overrides(options, environ):
+    effort = environ.get("SMEVALS_COPILOT_EFFORT")
+    if effort is None:
+        return options
+    if not isinstance(effort, str) or effort.strip() not in EFFORT_LEVELS:
+        raise CopilotRunnerError(
+            "SMEVALS_COPILOT_EFFORT must be one of: "
+            + ", ".join(sorted(EFFORT_LEVELS))
+        )
+    return replace(options, effort=effort.strip())
 
 
 def build_command(executable, prompt, model, options, cwd):
