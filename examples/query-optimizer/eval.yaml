@@ -1,0 +1,4 @@
+name: query-optimizer
+description: >-
+  Can an agent implement a deterministic cost-based relational query optimizer
+  that produces valid physical plans with low estimated execution cost?

@@ -1,0 +1,11 @@
+name: default
+checks:
+  - checker: ../checkers/grade-query-optimizer.py
+    creates:
+      - grading-results.json
+      - summary.md
+      - solution.patch
+      - showcase-plan.svg
+    required: true
+scoring:
+  pass_threshold: 0.7

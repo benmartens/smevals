@@ -274,6 +274,14 @@ artifacts:
 examples\carton-packing\benchmark\Run-CartonPackingBenchmark.ps1
 ```
 
+`examples/query-optimizer` applies the same workflow to a deterministic
+cost-based relational optimizer. Its grader validates physical plan trees and
+recomputes integer execution cost against an exact subset-DP reference:
+
+```powershell
+examples\query-optimizer\benchmark\Run-QueryOptimizerBenchmark.ps1
+```
+
 Copilot runs consume AI credits. `-n N` starts enough independent Copilot sessions to reach `N` successful Runs for every task/model pair, so set `max_ai_credits` and begin with a small sample.
 
 Eval definitions can execute their configured Runners and Checkers. Treat an Eval repository as trusted code, especially when it enables shell tools, URLs, MCP servers or `permissions: unrestricted`.

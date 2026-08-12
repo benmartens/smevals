@@ -1,0 +1,24 @@
+{
+  "models": [
+    {"id": "gpt-5-mini", "label": "GPT-5 mini", "effort": "high"},
+    {"id": "gpt-5.3-codex", "label": "GPT-5.3 Codex", "effort": "xhigh"},
+    {"id": "gpt-5.6-sol", "label": "GPT-5.6 Sol", "effort": "max"},
+    {"id": "gpt-5.6-terra", "label": "GPT-5.6 Terra", "effort": "max"},
+    {"id": "gpt-5.6-luna", "label": "GPT-5.6 Luna", "effort": "max"},
+    {"id": "claude-opus-5", "label": "Claude Opus 5.0", "effort": "max"},
+    {"id": "claude-sonnet-5", "label": "Claude Sonnet 5.0", "effort": "max"},
+    {
+      "id": "claude-haiku-4.5",
+      "label": "Claude Haiku 4.5",
+      "enabled": false,
+      "unavailableReason": "Not available in the current Copilot account",
+      "effort": "high"
+    },
+    {"id": "claude-sonnet-4.6", "label": "Claude Sonnet 4.6", "effort": "max"},
+    {"id": "claude-opus-4.8", "label": "Claude Opus 4.8", "effort": "max"},
+    {"id": "gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro", "effort": "high"},
+    {"id": "gemini-3.6-flash", "label": "Gemini 3.6 Flash", "effort": "high"},
+    {"id": "grok-4.5", "label": "Grok 4.5", "effort": "high"},
+    {"id": "mai-code-1-flash-picker", "label": "MAI-Code-1-Flash", "effort": "high"}
+  ]
+}

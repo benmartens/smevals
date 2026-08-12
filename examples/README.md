@@ -44,3 +44,13 @@ examples\carton-packing\benchmark\Run-CartonPackingBenchmark.ps1
 It runs models against an incomplete .NET 10 packing engine, generates hidden
 cases only after model execution, grades placement validity and optimization
 quality, and builds a static demo site with SVG layouts and source patches.
+
+The query-optimizer example uses the same isolated benchmark pattern for a
+cost-based relational optimizer:
+
+```powershell
+examples\query-optimizer\benchmark\Run-QueryOptimizerBenchmark.ps1
+```
+
+Its independent grader validates physical plan trees and compares their
+integer execution cost with an exact subset-DP reference optimizer.
