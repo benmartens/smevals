@@ -13,8 +13,8 @@ $runner = Join-Path $PSScriptRoot (
 )
 & $runner `
     -EvalDirectory (Split-Path $PSScriptRoot -Parent) `
-    -TaskName 'implement-packer' `
-    -HiddenEnvironmentVariable 'CARTON_PACKING_HIDDEN_DIR' `
+    -TaskName 'implement-rebalancer' `
+    -HiddenEnvironmentVariable 'REPLICATED_SHARD_REBALANCER_HIDDEN_DIR' `
     -ModelsPath $ModelsPath `
     -ModelTimeoutSeconds $ModelTimeoutSeconds `
     -PreflightTimeoutSeconds $PreflightTimeoutSeconds `

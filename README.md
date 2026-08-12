@@ -228,7 +228,7 @@ Other supported settings:
 - `secret_env_vars`: additional environment-variable names Copilot must redact and remove from tool/MCP environments. GitHub token variable names are included automatically.
 
 Automation can override only the configured reasoning effort for one Runner
-process with `SMEVALS_COPILOT_EFFORT`. The carton-packing benchmark uses this
+process with `SMEVALS_COPILOT_EFFORT`. The agentic coding benchmarks use this
 to select each model's highest supported level while retaining one clean
 `copilot` config in reports.
 
@@ -281,6 +281,26 @@ recomputes integer execution cost against an exact subset-DP reference:
 ```powershell
 examples\query-optimizer\benchmark\Run-QueryOptimizerBenchmark.ps1
 ```
+
+`examples/field-service-route-planner` asks models to assign time-windowed,
+skill-constrained service jobs to technicians while maximizing served value
+and minimizing travel:
+
+```powershell
+examples\field-service-route-planner\benchmark\Run-FieldServiceRoutePlannerBenchmark.ps1
+```
+
+`examples/replicated-shard-rebalancer` asks models to produce capacity-safe,
+zone-diverse replica placements while balancing utilization and limiting
+movement:
+
+```powershell
+examples\replicated-shard-rebalancer\benchmark\Run-ReplicatedShardRebalancerBenchmark.ps1
+```
+
+The four coding benchmark entry points share resumable model preflight,
+hidden-case isolation, grading, and report orchestration from
+`examples\benchmark-common`.
 
 Copilot runs consume AI credits. `-n N` starts enough independent Copilot sessions to reach `N` successful Runs for every task/model pair, so set `max_ai_credits` and begin with a small sample.
 

@@ -1,0 +1,8 @@
+runs/
+demo/
+benchmark/private/
+**/__pycache__/
+fixtures/starter/**/bin/
+fixtures/starter/**/obj/
+fixtures/starter/.vs/
+fixtures/starter/result*.json

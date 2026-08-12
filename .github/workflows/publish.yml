@@ -62,9 +62,48 @@ jobs:
     - name: Run helper contract tests
       run: |
         dotnet run --project examples/query-optimizer/fixtures/starter/visible-tests/QueryOptimizer.VisibleTests -c Release --no-build -- --helpers-only
+  field-service-route-planner:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 10.0.x
+    - name: Build starter
+      run: |
+        dotnet build examples/field-service-route-planner/fixtures/starter/FieldServiceRoutePlanner.sln -c Release --nologo
+    - name: Run helper contract tests
+      run: |
+        dotnet run --project examples/field-service-route-planner/fixtures/starter/visible-tests/FieldServiceRoutePlanner.VisibleTests -c Release --no-build -- --helpers-only
+  replicated-shard-rebalancer:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up .NET 10
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 10.0.x
+    - name: Build starter
+      run: |
+        dotnet build examples/replicated-shard-rebalancer/fixtures/starter/ReplicatedShardRebalancer.sln -c Release --nologo
+    - name: Run helper contract tests
+      run: |
+        dotnet run --project examples/replicated-shard-rebalancer/fixtures/starter/visible-tests/ReplicatedShardRebalancer.VisibleTests -c Release --no-build -- --helpers-only
   deploy:
     runs-on: ubuntu-latest
-    needs: [test, carton-packing, query-optimizer]
+    needs:
+    - test
+    - carton-packing
+    - query-optimizer
+    - field-service-route-planner
+    - replicated-shard-rebalancer
     environment: release
     permissions:
       id-token: write

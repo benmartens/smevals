@@ -1,0 +1,13 @@
+name: implement-planner
+copilot_workspace: fixtures/starter
+prompt: >-
+  Implement RoutePlanner.Plan in the provided dependency-free .NET 10
+  solution. Read README.md carefully and preserve the public JSON/CLI
+  contract. Return deterministic routes that satisfy technician skills,
+  service time windows, shifts, and travel times. Lexicographically maximize
+  served job value and then minimize total travel. You may modify source files
+  in the workspace, but do not add external packages or network dependencies.
+  Run `dotnet run --project
+  visible-tests\FieldServiceRoutePlanner.VisibleTests` until the visible tests
+  pass, and use the supplied validator while developing. When finished,
+  respond with a concise summary of the algorithm and tests run.

@@ -1,0 +1,14 @@
+name: implement-rebalancer
+copilot_workspace: fixtures/starter
+prompt: >-
+  Implement ReplicatedShardRebalancer.Rebalance in the provided .NET 10
+  solution. Read README.md carefully and preserve the public JSON/CLI
+  contract. The engine must return deterministic target placements satisfying
+  capacity, exclusion, replica-count, and maximum-zone-diversity rules while
+  lexicographically minimizing maximum utilization, utilization spread, moved
+  bytes, and moved replica count. You may modify source files in the workspace,
+  but do not add external packages or network dependencies. Run
+  `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests`
+  until the visible tests pass, and use the supplied validator while
+  developing. When finished, respond with a concise summary of the algorithm
+  and tests run.

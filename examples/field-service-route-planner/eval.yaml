@@ -1,0 +1,5 @@
+name: field-service-route-planner
+description: >-
+  Can an agent implement a deterministic field-service route planner that
+  respects skills, shifts, time windows, and asymmetric travel while making
+  strong value and travel trade-offs?

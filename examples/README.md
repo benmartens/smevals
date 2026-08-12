@@ -54,3 +54,21 @@ examples\query-optimizer\benchmark\Run-QueryOptimizerBenchmark.ps1
 
 Its independent grader validates physical plan trees and compares their
 integer execution cost with an exact subset-DP reference optimizer.
+
+The field-service route-planner benchmark covers skill-constrained technician
+assignment, travel times, shifts, and job time windows:
+
+```powershell
+examples\field-service-route-planner\benchmark\Run-FieldServiceRoutePlannerBenchmark.ps1
+```
+
+The replicated-shard-rebalancer benchmark covers capacity-safe, zone-diverse
+replica placement with balance and movement objectives:
+
+```powershell
+examples\replicated-shard-rebalancer\benchmark\Run-ReplicatedShardRebalancerBenchmark.ps1
+```
+
+All four coding benchmark entry points use the shared orchestration under
+`examples\benchmark-common` for model preflight, resumable runs, hidden-case
+generation, grading, and report builds.

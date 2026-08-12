@@ -1,0 +1,4 @@
+name: replicated-shard-rebalancer
+description: >-
+  Can an agent implement a deterministic replicated-shard rebalancer that
+  preserves hard placement constraints while optimizing balance and movement?
