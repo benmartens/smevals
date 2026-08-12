@@ -1,0 +1,1213 @@
+{
+  "schema_version": 1,
+  "seed": 2655541378279883153,
+  "cases": [
+    {
+      "id": "selective_index",
+      "description": "A selective index is much cheaper than a full scan",
+      "problem": {
+        "memoryLimitRows": 100,
+        "tables": [
+          {
+            "id": "events",
+            "rows": 67098,
+            "scanCostPerRow": 4,
+            "indexes": [
+              {
+                "column": "tenant",
+                "seekStartupCost": 25,
+                "lookupCostPerRow": 2
+              }
+            ]
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "events",
+            "column": "tenant",
+            "selectivityPermille": 11,
+            "indexable": true
+          }
+        ],
+        "joins": []
+      },
+      "reference": {
+        "cost": 2981,
+        "plan": {
+          "operator": "indexSeek",
+          "tableId": "events",
+          "indexColumn": "tenant"
+        }
+      },
+      "weight": 0.25
+    },
+    {
+      "id": "join_order_trap",
+      "description": "Joining the two largest inputs first creates an expensive intermediate",
+      "problem": {
+        "memoryLimitRows": 500,
+        "tables": [
+          {
+            "id": "customers",
+            "rows": 2000,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "region",
+                "seekStartupCost": 20,
+                "lookupCostPerRow": 2
+              }
+            ]
+          },
+          {
+            "id": "orders",
+            "rows": 160000,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "regions",
+            "rows": 25,
+            "scanCostPerRow": 4,
+            "indexes": []
+          },
+          {
+            "id": "returns",
+            "rows": 50000,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "flag",
+                "seekStartupCost": 15,
+                "lookupCostPerRow": 2
+              }
+            ]
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "customers",
+            "column": "region",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "returns",
+            "column": "flag",
+            "selectivityPermille": 10,
+            "indexable": true
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "customers",
+            "rightTable": "orders",
+            "selectivityPermille": 8
+          },
+          {
+            "leftTable": "customers",
+            "rightTable": "regions",
+            "selectivityPermille": 40
+          },
+          {
+            "leftTable": "orders",
+            "rightTable": "returns",
+            "selectivityPermille": 2
+          }
+        ]
+      },
+      "reference": {
+        "cost": 2059725,
+        "plan": {
+          "operator": "hashJoin",
+          "left": {
+            "operator": "hashJoin",
+            "left": {
+              "operator": "hashJoin",
+              "left": {
+                "operator": "indexSeek",
+                "tableId": "customers",
+                "indexColumn": "region"
+              },
+              "right": {
+                "operator": "tableScan",
+                "tableId": "regions"
+              }
+            },
+            "right": {
+              "operator": "tableScan",
+              "tableId": "orders"
+            }
+          },
+          "right": {
+            "operator": "indexSeek",
+            "tableId": "returns",
+            "indexColumn": "flag"
+          }
+        }
+      },
+      "weight": 2.0
+    },
+    {
+      "id": "memory_spill",
+      "description": "Hash joins spill under a tight memory budget",
+      "problem": {
+        "memoryLimitRows": 12,
+        "tables": [
+          {
+            "id": "a",
+            "rows": 900,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "b",
+            "rows": 1100,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "c",
+            "rows": 80,
+            "scanCostPerRow": 5,
+            "indexes": [
+              {
+                "column": "kind",
+                "seekStartupCost": 10,
+                "lookupCostPerRow": 2
+              }
+            ]
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "c",
+            "column": "kind",
+            "selectivityPermille": 25,
+            "indexable": true
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "a",
+            "rightTable": "b",
+            "selectivityPermille": 8
+          },
+          {
+            "leftTable": "b",
+            "rightTable": "c",
+            "selectivityPermille": 20
+          }
+        ]
+      },
+      "reference": {
+        "cost": 16995,
+        "plan": {
+          "operator": "hashJoin",
+          "left": {
+            "operator": "tableScan",
+            "tableId": "a"
+          },
+          "right": {
+            "operator": "nestedLoop",
+            "left": {
+              "operator": "tableScan",
+              "tableId": "b"
+            },
+            "right": {
+              "operator": "indexSeek",
+              "tableId": "c",
+              "indexColumn": "kind"
+            }
+          }
+        }
+      },
+      "weight": 2.0
+    },
+    {
+      "id": "star_schema",
+      "description": "Six-table star with selective dimensions",
+      "problem": {
+        "memoryLimitRows": 1000,
+        "tables": [
+          {
+            "id": "t00",
+            "rows": 100372,
+            "scanCostPerRow": 2,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 53,
+                "lookupCostPerRow": 3
+              }
+            ]
+          },
+          {
+            "id": "t01",
+            "rows": 34040,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "t02",
+            "rows": 284127,
+            "scanCostPerRow": 6,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 55,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t03",
+            "rows": 23711,
+            "scanCostPerRow": 2,
+            "indexes": []
+          },
+          {
+            "id": "t04",
+            "rows": 99738,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 29,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t05",
+            "rows": 198612,
+            "scanCostPerRow": 2,
+            "indexes": []
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "t00",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "t02",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "t03",
+            "column": "status",
+            "selectivityPermille": 500,
+            "indexable": false
+          },
+          {
+            "tableId": "t04",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "t00",
+            "rightTable": "t01",
+            "selectivityPermille": 8
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t02",
+            "selectivityPermille": 80
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t03",
+            "selectivityPermille": 8
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t04",
+            "selectivityPermille": 8
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t05",
+            "selectivityPermille": 3
+          }
+        ]
+      },
+      "reference": {
+        "cost": 1157497991,
+        "plan": {
+          "operator": "hashJoin",
+          "left": {
+            "operator": "hashJoin",
+            "left": {
+              "operator": "hashJoin",
+              "left": {
+                "operator": "hashJoin",
+                "left": {
+                  "operator": "hashJoin",
+                  "left": {
+                    "operator": "indexSeek",
+                    "tableId": "t00",
+                    "indexColumn": "filter"
+                  },
+                  "right": {
+                    "operator": "indexSeek",
+                    "tableId": "t04",
+                    "indexColumn": "filter"
+                  }
+                },
+                "right": {
+                  "operator": "tableScan",
+                  "tableId": "t03"
+                }
+              },
+              "right": {
+                "operator": "tableScan",
+                "tableId": "t05"
+              }
+            },
+            "right": {
+              "operator": "indexSeek",
+              "tableId": "t02",
+              "indexColumn": "filter"
+            }
+          },
+          "right": {
+            "operator": "tableScan",
+            "tableId": "t01"
+          }
+        }
+      },
+      "weight": 3.0
+    },
+    {
+      "id": "chain_eight",
+      "description": "Eight-table chain with alternating selective leaves",
+      "problem": {
+        "memoryLimitRows": 200,
+        "tables": [
+          {
+            "id": "t00",
+            "rows": 39155,
+            "scanCostPerRow": 4,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 70,
+                "lookupCostPerRow": 3
+              }
+            ]
+          },
+          {
+            "id": "t01",
+            "rows": 55374,
+            "scanCostPerRow": 5,
+            "indexes": []
+          },
+          {
+            "id": "t02",
+            "rows": 12057,
+            "scanCostPerRow": 2,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 15,
+                "lookupCostPerRow": 1
+              }
+            ]
+          },
+          {
+            "id": "t03",
+            "rows": 28721,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t04",
+            "rows": 200160,
+            "scanCostPerRow": 4,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 20,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t05",
+            "rows": 266508,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t06",
+            "rows": 63411,
+            "scanCostPerRow": 2,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 49,
+                "lookupCostPerRow": 3
+              }
+            ]
+          },
+          {
+            "id": "t07",
+            "rows": 218902,
+            "scanCostPerRow": 4,
+            "indexes": []
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "t00",
+            "column": "filter",
+            "selectivityPermille": 120,
+            "indexable": true
+          },
+          {
+            "tableId": "t02",
+            "column": "filter",
+            "selectivityPermille": 15,
+            "indexable": true
+          },
+          {
+            "tableId": "t03",
+            "column": "status",
+            "selectivityPermille": 500,
+            "indexable": false
+          },
+          {
+            "tableId": "t04",
+            "column": "filter",
+            "selectivityPermille": 400,
+            "indexable": true
+          },
+          {
+            "tableId": "t06",
+            "column": "filter",
+            "selectivityPermille": 120,
+            "indexable": true
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "t00",
+            "rightTable": "t01",
+            "selectivityPermille": 5
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t02",
+            "selectivityPermille": 60
+          },
+          {
+            "leftTable": "t02",
+            "rightTable": "t03",
+            "selectivityPermille": 5
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t04",
+            "selectivityPermille": 200
+          },
+          {
+            "leftTable": "t04",
+            "rightTable": "t05",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t05",
+            "rightTable": "t06",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t06",
+            "rightTable": "t07",
+            "selectivityPermille": 5
+          }
+        ]
+      },
+      "reference": {
+        "cost": 549370232,
+        "plan": {
+          "operator": "hashJoin",
+          "left": {
+            "operator": "indexSeek",
+            "tableId": "t00",
+            "indexColumn": "filter"
+          },
+          "right": {
+            "operator": "hashJoin",
+            "left": {
+              "operator": "tableScan",
+              "tableId": "t01"
+            },
+            "right": {
+              "operator": "hashJoin",
+              "left": {
+                "operator": "hashJoin",
+                "left": {
+                  "operator": "indexSeek",
+                  "tableId": "t02",
+                  "indexColumn": "filter"
+                },
+                "right": {
+                  "operator": "tableScan",
+                  "tableId": "t03"
+                }
+              },
+              "right": {
+                "operator": "hashJoin",
+                "left": {
+                  "operator": "hashJoin",
+                  "left": {
+                    "operator": "indexSeek",
+                    "tableId": "t04",
+                    "indexColumn": "filter"
+                  },
+                  "right": {
+                    "operator": "tableScan",
+                    "tableId": "t05"
+                  }
+                },
+                "right": {
+                  "operator": "hashJoin",
+                  "left": {
+                    "operator": "indexSeek",
+                    "tableId": "t06",
+                    "indexColumn": "filter"
+                  },
+                  "right": {
+                    "operator": "tableScan",
+                    "tableId": "t07"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "weight": 3.0
+    },
+    {
+      "id": "snowflake_ten",
+      "description": "Ten-table snowflake with extra join edges",
+      "problem": {
+        "memoryLimitRows": 200,
+        "tables": [
+          {
+            "id": "t00",
+            "rows": 73511,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 68,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t01",
+            "rows": 146832,
+            "scanCostPerRow": 2,
+            "indexes": []
+          },
+          {
+            "id": "t02",
+            "rows": 220578,
+            "scanCostPerRow": 6,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 37,
+                "lookupCostPerRow": 1
+              }
+            ]
+          },
+          {
+            "id": "t03",
+            "rows": 112209,
+            "scanCostPerRow": 2,
+            "indexes": []
+          },
+          {
+            "id": "t04",
+            "rows": 92658,
+            "scanCostPerRow": 4,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 79,
+                "lookupCostPerRow": 1
+              }
+            ]
+          },
+          {
+            "id": "t05",
+            "rows": 67770,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "t06",
+            "rows": 31454,
+            "scanCostPerRow": 5,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 32,
+                "lookupCostPerRow": 2
+              }
+            ]
+          },
+          {
+            "id": "t07",
+            "rows": 19248,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t08",
+            "rows": 285027,
+            "scanCostPerRow": 5,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 61,
+                "lookupCostPerRow": 2
+              }
+            ]
+          },
+          {
+            "id": "t09",
+            "rows": 68786,
+            "scanCostPerRow": 4,
+            "indexes": []
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "t00",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "t02",
+            "column": "filter",
+            "selectivityPermille": 8,
+            "indexable": true
+          },
+          {
+            "tableId": "t03",
+            "column": "status",
+            "selectivityPermille": 50,
+            "indexable": false
+          },
+          {
+            "tableId": "t04",
+            "column": "filter",
+            "selectivityPermille": 400,
+            "indexable": true
+          },
+          {
+            "tableId": "t06",
+            "column": "filter",
+            "selectivityPermille": 3,
+            "indexable": true
+          },
+          {
+            "tableId": "t08",
+            "column": "filter",
+            "selectivityPermille": 8,
+            "indexable": true
+          },
+          {
+            "tableId": "t09",
+            "column": "status",
+            "selectivityPermille": 500,
+            "indexable": false
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "t00",
+            "rightTable": "t01",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t02",
+            "selectivityPermille": 4
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t03",
+            "selectivityPermille": 12
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t04",
+            "selectivityPermille": 4
+          },
+          {
+            "leftTable": "t02",
+            "rightTable": "t05",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t02",
+            "rightTable": "t06",
+            "selectivityPermille": 150
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t07",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t08",
+            "selectivityPermille": 4
+          },
+          {
+            "leftTable": "t04",
+            "rightTable": "t09",
+            "selectivityPermille": 150
+          },
+          {
+            "leftTable": "t05",
+            "rightTable": "t00",
+            "selectivityPermille": 40
+          },
+          {
+            "leftTable": "t07",
+            "rightTable": "t02",
+            "selectivityPermille": 2
+          }
+        ]
+      },
+      "reference": {
+        "cost": 5022698,
+        "plan": {
+          "operator": "nestedLoop",
+          "left": {
+            "operator": "nestedLoop",
+            "left": {
+              "operator": "nestedLoop",
+              "left": {
+                "operator": "hashJoin",
+                "left": {
+                  "operator": "hashJoin",
+                  "left": {
+                    "operator": "hashJoin",
+                    "left": {
+                      "operator": "hashJoin",
+                      "left": {
+                        "operator": "hashJoin",
+                        "left": {
+                          "operator": "indexSeek",
+                          "tableId": "t00",
+                          "indexColumn": "filter"
+                        },
+                        "right": {
+                          "operator": "indexSeek",
+                          "tableId": "t02",
+                          "indexColumn": "filter"
+                        }
+                      },
+                      "right": {
+                        "operator": "tableScan",
+                        "tableId": "t05"
+                      }
+                    },
+                    "right": {
+                      "operator": "hashJoin",
+                      "left": {
+                        "operator": "tableScan",
+                        "tableId": "t03"
+                      },
+                      "right": {
+                        "operator": "tableScan",
+                        "tableId": "t07"
+                      }
+                    }
+                  },
+                  "right": {
+                    "operator": "indexSeek",
+                    "tableId": "t06",
+                    "indexColumn": "filter"
+                  }
+                },
+                "right": {
+                  "operator": "indexSeek",
+                  "tableId": "t08",
+                  "indexColumn": "filter"
+                }
+              },
+              "right": {
+                "operator": "tableScan",
+                "tableId": "t01"
+              }
+            },
+            "right": {
+              "operator": "indexSeek",
+              "tableId": "t04",
+              "indexColumn": "filter"
+            }
+          },
+          "right": {
+            "operator": "tableScan",
+            "tableId": "t09"
+          }
+        }
+      },
+      "weight": 4.0
+    },
+    {
+      "id": "dense_twelve",
+      "description": "Twelve-table workload requiring broad join-order search",
+      "problem": {
+        "memoryLimitRows": 1000,
+        "tables": [
+          {
+            "id": "t00",
+            "rows": 17208,
+            "scanCostPerRow": 6,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 56,
+                "lookupCostPerRow": 3
+              }
+            ]
+          },
+          {
+            "id": "t01",
+            "rows": 207368,
+            "scanCostPerRow": 5,
+            "indexes": []
+          },
+          {
+            "id": "t02",
+            "rows": 246714,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 49,
+                "lookupCostPerRow": 1
+              }
+            ]
+          },
+          {
+            "id": "t03",
+            "rows": 8348,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t04",
+            "rows": 176602,
+            "scanCostPerRow": 6,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 20,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t05",
+            "rows": 328182,
+            "scanCostPerRow": 3,
+            "indexes": []
+          },
+          {
+            "id": "t06",
+            "rows": 50729,
+            "scanCostPerRow": 6,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 20,
+                "lookupCostPerRow": 4
+              }
+            ]
+          },
+          {
+            "id": "t07",
+            "rows": 139002,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t08",
+            "rows": 168867,
+            "scanCostPerRow": 5,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 45,
+                "lookupCostPerRow": 3
+              }
+            ]
+          },
+          {
+            "id": "t09",
+            "rows": 107753,
+            "scanCostPerRow": 6,
+            "indexes": []
+          },
+          {
+            "id": "t10",
+            "rows": 168204,
+            "scanCostPerRow": 3,
+            "indexes": [
+              {
+                "column": "filter",
+                "seekStartupCost": 41,
+                "lookupCostPerRow": 1
+              }
+            ]
+          },
+          {
+            "id": "t11",
+            "rows": 222462,
+            "scanCostPerRow": 6,
+            "indexes": []
+          }
+        ],
+        "predicates": [
+          {
+            "tableId": "t00",
+            "column": "filter",
+            "selectivityPermille": 3,
+            "indexable": true
+          },
+          {
+            "tableId": "t02",
+            "column": "filter",
+            "selectivityPermille": 120,
+            "indexable": true
+          },
+          {
+            "tableId": "t03",
+            "column": "status",
+            "selectivityPermille": 500,
+            "indexable": false
+          },
+          {
+            "tableId": "t04",
+            "column": "filter",
+            "selectivityPermille": 3,
+            "indexable": true
+          },
+          {
+            "tableId": "t06",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "t08",
+            "column": "filter",
+            "selectivityPermille": 40,
+            "indexable": true
+          },
+          {
+            "tableId": "t09",
+            "column": "status",
+            "selectivityPermille": 150,
+            "indexable": false
+          },
+          {
+            "tableId": "t10",
+            "column": "filter",
+            "selectivityPermille": 8,
+            "indexable": true
+          }
+        ],
+        "joins": [
+          {
+            "leftTable": "t00",
+            "rightTable": "t01",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t00",
+            "rightTable": "t02",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t03",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t04",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t02",
+            "rightTable": "t05",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t02",
+            "rightTable": "t06",
+            "selectivityPermille": 1
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t07",
+            "selectivityPermille": 4
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t08",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t04",
+            "rightTable": "t09",
+            "selectivityPermille": 50
+          },
+          {
+            "leftTable": "t04",
+            "rightTable": "t10",
+            "selectivityPermille": 4
+          },
+          {
+            "leftTable": "t05",
+            "rightTable": "t11",
+            "selectivityPermille": 150
+          },
+          {
+            "leftTable": "t03",
+            "rightTable": "t02",
+            "selectivityPermille": 2
+          },
+          {
+            "leftTable": "t01",
+            "rightTable": "t07",
+            "selectivityPermille": 40
+          },
+          {
+            "leftTable": "t11",
+            "rightTable": "t02",
+            "selectivityPermille": 10
+          },
+          {
+            "leftTable": "t07",
+            "rightTable": "t11",
+            "selectivityPermille": 2
+          }
+        ]
+      },
+      "reference": {
+        "cost": 14267999,
+        "plan": {
+          "operator": "nestedLoop",
+          "left": {
+            "operator": "nestedLoop",
+            "left": {
+              "operator": "nestedLoop",
+              "left": {
+                "operator": "nestedLoop",
+                "left": {
+                  "operator": "nestedLoop",
+                  "left": {
+                    "operator": "hashJoin",
+                    "left": {
+                      "operator": "hashJoin",
+                      "left": {
+                        "operator": "indexSeek",
+                        "tableId": "t00",
+                        "indexColumn": "filter"
+                      },
+                      "right": {
+                        "operator": "hashJoin",
+                        "left": {
+                          "operator": "hashJoin",
+                          "left": {
+                            "operator": "tableScan",
+                            "tableId": "t01"
+                          },
+                          "right": {
+                            "operator": "indexSeek",
+                            "tableId": "t04",
+                            "indexColumn": "filter"
+                          }
+                        },
+                        "right": {
+                          "operator": "hashJoin",
+                          "left": {
+                            "operator": "hashJoin",
+                            "left": {
+                              "operator": "indexSeek",
+                              "tableId": "t02",
+                              "indexColumn": "filter"
+                            },
+                            "right": {
+                              "operator": "indexSeek",
+                              "tableId": "t06",
+                              "indexColumn": "filter"
+                            }
+                          },
+                          "right": {
+                            "operator": "tableScan",
+                            "tableId": "t03"
+                          }
+                        }
+                      }
+                    },
+                    "right": {
+                      "operator": "indexSeek",
+                      "tableId": "t10",
+                      "indexColumn": "filter"
+                    }
+                  },
+                  "right": {
+                    "operator": "indexSeek",
+                    "tableId": "t08",
+                    "indexColumn": "filter"
+                  }
+                },
+                "right": {
+                  "operator": "tableScan",
+                  "tableId": "t05"
+                }
+              },
+              "right": {
+                "operator": "tableScan",
+                "tableId": "t07"
+              }
+            },
+            "right": {
+              "operator": "tableScan",
+              "tableId": "t09"
+            }
+          },
+          "right": {
+            "operator": "tableScan",
+            "tableId": "t11"
+          }
+        }
+      },
+      "weight": 4.0
+    }
+  ],
+  "probe_case_id": "snowflake_ten"
+}

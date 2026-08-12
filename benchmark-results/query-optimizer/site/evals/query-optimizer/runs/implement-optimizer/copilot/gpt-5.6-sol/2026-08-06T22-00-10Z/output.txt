@@ -1,0 +1,3 @@
+Implemented `QueryOptimizer.Optimize` with deterministic access-path selection, connected-subset dynamic programming, canonical joins, saturating cost arithmetic, and a large-query fallback.
+
+`dotnet run --project visible-tests\QueryOptimizer.VisibleTests` passes **7/7 tests**.

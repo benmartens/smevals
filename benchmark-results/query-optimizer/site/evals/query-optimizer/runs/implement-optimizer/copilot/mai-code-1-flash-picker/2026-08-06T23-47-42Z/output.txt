@@ -1,0 +1,10 @@
+Implemented a deterministic subset-DP optimizer in `src/QueryOptimizer/QueryOptimizer.cs` that:
+- evaluates valid leaf access paths (`tableScan` / legal `indexSeek`),
+- builds valid binary join trees with canonical child ordering and crossing-join checks,
+- keeps nondominated `(cost, rows)` states per table subset, and
+- prefers merge joins when hash joins would spill under the memory limit.
+
+Ran:
+- `dotnet run --project visible-tests\QueryOptimizer.VisibleTests`
+
+Result: 7/7 visible tests passed.

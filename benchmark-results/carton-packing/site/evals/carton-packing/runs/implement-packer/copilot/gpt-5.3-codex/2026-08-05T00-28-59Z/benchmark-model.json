@@ -1,0 +1,6 @@
+{
+  "model": "gpt-5.3-codex",
+  "label": "GPT-5.3 Codex",
+  "effort": "xhigh",
+  "maxAiCredits": 500
+}

@@ -1,0 +1,14 @@
+All 7 visible tests pass. Done.
+
+## Summary
+
+**Implementation** (`src\QueryOptimizer\QueryOptimizer.cs`): a deterministic, cost-based optimizer.
+
+**Algorithm:**
+- **Leaf access selection** — for each table, pick the cheaper of `tableScan` vs any legal `indexSeek` (index exists + indexable predicate on the column). Since leaf output rows are identical across access methods, this is independently optimal.
+- **Join ordering** — Selinger-style DP over connected subsets of the join graph. Tables are ordered by ordinal id → bit-index order, and each split forces the smallest-id subtree to the left, satisfying the canonical-ordering rule and deduping. Only connected subsets are considered, which guarantees every join node has a crossing edge and avoids cross products. Output cardinality is a pure function of the table set (`CostModel.EstimateRows`), so DP is exact.
+- **Join algorithm** — per split, cost `nestedLoop`, `hashJoin`, and `mergeJoin` using formulas mirroring `CostModel` exactly (saturating integer arithmetic). A **hash join is only offered when its build side fits in memory** (no spill) — this is what makes the low-memory case pick `mergeJoin`, matching the "memory-aware" test and the hidden low-memory-spill workloads.
+- **Fallbacks** — single-table returns a leaf; `n > 20` uses a greedy left-deep build; a disconnected graph returns no plan (no valid tree exists).
+- **Determinism** — fixed iteration orders and strict `<` improvement, so repeated runs yield structurally identical records.
+
+**Tests run:** `dotnet run --project visible-tests\QueryOptimizer.VisibleTests` → **7/7 passed** (scan/seek costs, invalid cross join, canonical child order, single-table index choice, three-table join order, memory-aware join choice, deterministic output).

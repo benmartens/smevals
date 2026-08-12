@@ -1,0 +1,14 @@
+Done. All 9 visible tests pass and the CLI validator returns exit 0 on the scenario.
+
+## Summary
+
+**Algorithm** (`src/ReplicatedShardRebalancer/ReplicatedShardRebalancer.cs`): an exact branch‑and‑bound solver.
+
+- **Preprocessing**: builds nodes/shards/exclusions/current sets. For each shard, computes eligible nodes (`capacity ≥ size`, not excluded), required zone diversity = `min(rf, distinctEligibleZones)`, and enumerates every `rf`‑node combo whose distinct‑zone count equals that maximum — matching the validator exactly.
+- **Search**: DFS over shards (largest‑first for tighter pruning), enforcing capacity incrementally. Each leaf is scored by the exact lexicographic key `(maxUtil, spread, movedBytes, movedReplicas, ordinal placement)`; the global minimum is kept.
+- **Exactness**: utilizations compared as `BigInteger` rationals (no float error). A greedy min‑max warm start seeds the incumbent. Pruning uses provable lower bounds — `max(partialMax, totalLoad/totalCap)` for max‑util, `LBmax − UBmin` for spread (UBmin from per‑node max addable remaining load), and accumulated moved bytes/replicas — pruning only branches strictly worse on the first four objectives, so the optimum and tie‑break are never missed.
+- **Determinism**: fully sorted (nodes/combos/output by ordinal ID); repeated calls are identical. Output placements are sorted by shard ID with each `nodeIds` sorted ordinally.
+
+**Tests run**: `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` → **9/9 passed** (helper + engine: overload repair, exclusions, determinism). CLI on `scenarios\small-cluster.json` → exit 0 (validator clean), producing the optimal `orders=[node-a,node-c]`, `users=[node-b,node-d]`.
+
+No external packages added; no workspace temp files left.

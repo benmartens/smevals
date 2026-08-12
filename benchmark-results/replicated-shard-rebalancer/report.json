@@ -1,0 +1,291 @@
+{
+  "eval": "replicated-shard-rebalancer",
+  "grader": "default",
+  "grader_version": "657df41",
+  "excluded_failed_runs": 0,
+  "rows": [
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "claude-opus-4.8",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 5566
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\claude-opus-4.8\\2026-08-07T22-49-25Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "claude-opus-5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 6196
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\claude-opus-5\\2026-08-07T23-47-07Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "claude-sonnet-4.6",
+      "outcome": "pass",
+      "score": 0.926661,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 0.9267,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4544
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\claude-sonnet-4.6\\2026-08-07T22-46-26Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "claude-sonnet-5",
+      "outcome": "pass",
+      "score": 0.959022,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 0.959,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4538
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\claude-sonnet-5\\2026-08-07T22-37-38Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gemini-3.1-pro-preview",
+      "outcome": "fail",
+      "score": 0.0,
+      "tags": [
+        "deterministic",
+        "issue_missing_shard"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 0.0,
+        "average_objective_score": 0.0,
+        "deterministic": true,
+        "hidden_cases_valid": 0,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4552
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gemini-3.1-pro-preview\\2026-08-07T23-02-29Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gemini-3.6-flash",
+      "outcome": "pass",
+      "score": 0.980151,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 0.9802,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4589
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gemini-3.6-flash\\2026-08-07T23-03-29Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gpt-5-mini",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4536
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gpt-5-mini\\2026-08-07T21-11-17Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gpt-5.3-codex",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4617
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gpt-5.3-codex\\2026-08-07T21-35-41Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gpt-5.6-luna",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4804
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gpt-5.6-luna\\2026-08-07T22-01-51Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gpt-5.6-sol",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4654
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gpt-5.6-sol\\2026-08-07T21-40-58Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "gpt-5.6-terra",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4743
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\gpt-5.6-terra\\2026-08-07T21-52-16Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "grok-4.5",
+      "outcome": "pass",
+      "score": 0.980151,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 1.0,
+        "average_objective_score": 0.9802,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4484
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\grok-4.5\\2026-08-07T23-08-07Z"
+    },
+    {
+      "task": "implement-rebalancer",
+      "config": "copilot",
+      "model": "mai-code-1-flash-picker",
+      "outcome": "pass",
+      "score": 0.777582,
+      "tags": [
+        "issue_run_failure"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_target_rate": 0.875,
+        "average_objective_score": 0.8016,
+        "deterministic": false,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4525
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\replicated-shard-rebalancer\\runs\\implement-rebalancer\\copilot\\mai-code-1-flash-picker\\2026-08-07T23-11-22Z"
+    }
+  ]
+}

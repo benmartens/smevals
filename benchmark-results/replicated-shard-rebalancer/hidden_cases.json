@@ -1,0 +1,1123 @@
+{
+  "schema_version": 1,
+  "seed": 4704640833204588591,
+  "cases": [
+    {
+      "id": "overloaded_pair",
+      "description": "Replicas begin concentrated on one node pair",
+      "category": "overload",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 14
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 14
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 14
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 14
+          }
+        ],
+        "shards": [
+          {
+            "id": "s1",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "s2",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "s3",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "s4",
+            "size": 4,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "s1",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "s2",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "s3",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "s4",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "s1",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "s2",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "s3",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "s4",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 8,
+            "a2": 8,
+            "b1": 8,
+            "b2": 8
+          },
+          "maximumUtilization": {
+            "numerator": 4,
+            "denominator": 7
+          },
+          "utilizationSpread": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "movedBytes": 16,
+          "movedReplicaCount": 4
+        }
+      },
+      "weight": 2.0
+    },
+    {
+      "id": "uneven_shard_sizes",
+      "description": "Large and small shards must be composed globally",
+      "category": "uneven shard sizes",
+      "problem": {
+        "nodes": [
+          {
+            "id": "n1",
+            "zone": "red",
+            "capacity": 15
+          },
+          {
+            "id": "n2",
+            "zone": "red",
+            "capacity": 13
+          },
+          {
+            "id": "n3",
+            "zone": "blue",
+            "capacity": 14
+          },
+          {
+            "id": "n4",
+            "zone": "blue",
+            "capacity": 12
+          },
+          {
+            "id": "n5",
+            "zone": "green",
+            "capacity": 10
+          }
+        ],
+        "shards": [
+          {
+            "id": "large",
+            "size": 7,
+            "replicationFactor": 2
+          },
+          {
+            "id": "medium",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "small-a",
+            "size": 2,
+            "replicationFactor": 2
+          },
+          {
+            "id": "small-b",
+            "size": 3,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "large",
+            "nodeIds": [
+              "n1",
+              "n3"
+            ]
+          },
+          {
+            "shardId": "medium",
+            "nodeIds": [
+              "n1",
+              "n3"
+            ]
+          },
+          {
+            "shardId": "small-a",
+            "nodeIds": [
+              "n2",
+              "n4"
+            ]
+          },
+          {
+            "shardId": "small-b",
+            "nodeIds": [
+              "n2",
+              "n4"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "large",
+            "nodeIds": [
+              "n1",
+              "n3"
+            ]
+          },
+          {
+            "shardId": "medium",
+            "nodeIds": [
+              "n2",
+              "n4"
+            ]
+          },
+          {
+            "shardId": "small-a",
+            "nodeIds": [
+              "n4",
+              "n5"
+            ]
+          },
+          {
+            "shardId": "small-b",
+            "nodeIds": [
+              "n2",
+              "n5"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "n1": 7,
+            "n2": 7,
+            "n3": 7,
+            "n4": 6,
+            "n5": 5
+          },
+          "maximumUtilization": {
+            "numerator": 7,
+            "denominator": 13
+          },
+          "utilizationSpread": {
+            "numerator": 14,
+            "denominator": 195
+          },
+          "movedBytes": 13,
+          "movedReplicaCount": 4
+        }
+      },
+      "weight": 3.0
+    },
+    {
+      "id": "zone_scarcity",
+      "description": "Three replicas have only two eligible zones",
+      "category": "zone scarcity",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 12
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 12
+          },
+          {
+            "id": "a3",
+            "zone": "a",
+            "capacity": 10
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 12
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 10
+          }
+        ],
+        "shards": [
+          {
+            "id": "catalog",
+            "size": 4,
+            "replicationFactor": 3
+          },
+          {
+            "id": "events",
+            "size": 3,
+            "replicationFactor": 3
+          },
+          {
+            "id": "profiles",
+            "size": 2,
+            "replicationFactor": 3
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "catalog",
+            "nodeIds": [
+              "a1",
+              "a2",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "events",
+            "nodeIds": [
+              "a1",
+              "a2",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "profiles",
+            "nodeIds": [
+              "a1",
+              "a3",
+              "b2"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "catalog",
+            "nodeIds": [
+              "a1",
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "events",
+            "nodeIds": [
+              "a2",
+              "a3",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "profiles",
+            "nodeIds": [
+              "a1",
+              "a3",
+              "b1"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 6,
+            "a2": 7,
+            "a3": 5,
+            "b1": 5,
+            "b2": 4
+          },
+          "maximumUtilization": {
+            "numerator": 7,
+            "denominator": 12
+          },
+          "utilizationSpread": {
+            "numerator": 11,
+            "denominator": 60
+          },
+          "movedBytes": 9,
+          "movedReplicaCount": 3
+        }
+      },
+      "weight": 2.0
+    },
+    {
+      "id": "maintenance_exclusions",
+      "description": "Per-shard exclusions force selective evacuation",
+      "category": "exclusions",
+      "problem": {
+        "nodes": [
+          {
+            "id": "e1",
+            "zone": "east",
+            "capacity": 12
+          },
+          {
+            "id": "e2",
+            "zone": "east",
+            "capacity": 12
+          },
+          {
+            "id": "w1",
+            "zone": "west",
+            "capacity": 12
+          },
+          {
+            "id": "w2",
+            "zone": "west",
+            "capacity": 12
+          },
+          {
+            "id": "c1",
+            "zone": "central",
+            "capacity": 12
+          }
+        ],
+        "shards": [
+          {
+            "id": "alpha",
+            "size": 5,
+            "replicationFactor": 2
+          },
+          {
+            "id": "beta",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "gamma",
+            "size": 3,
+            "replicationFactor": 2
+          },
+          {
+            "id": "delta",
+            "size": 2,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "alpha",
+            "nodeIds": [
+              "e1",
+              "w1"
+            ]
+          },
+          {
+            "shardId": "beta",
+            "nodeIds": [
+              "e1",
+              "w1"
+            ]
+          },
+          {
+            "shardId": "gamma",
+            "nodeIds": [
+              "e2",
+              "w2"
+            ]
+          },
+          {
+            "shardId": "delta",
+            "nodeIds": [
+              "e2",
+              "w2"
+            ]
+          }
+        ],
+        "exclusions": [
+          {
+            "shardId": "alpha",
+            "nodeId": "e1"
+          },
+          {
+            "shardId": "beta",
+            "nodeId": "w1"
+          },
+          {
+            "shardId": "gamma",
+            "nodeId": "c1"
+          },
+          {
+            "shardId": "delta",
+            "nodeId": "e2"
+          }
+        ]
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "alpha",
+            "nodeIds": [
+              "e2",
+              "w1"
+            ]
+          },
+          {
+            "shardId": "beta",
+            "nodeIds": [
+              "c1",
+              "e1"
+            ]
+          },
+          {
+            "shardId": "delta",
+            "nodeIds": [
+              "c1",
+              "w2"
+            ]
+          },
+          {
+            "shardId": "gamma",
+            "nodeIds": [
+              "e1",
+              "w2"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "c1": 6,
+            "e1": 7,
+            "e2": 5,
+            "w1": 5,
+            "w2": 5
+          },
+          "maximumUtilization": {
+            "numerator": 7,
+            "denominator": 12
+          },
+          "utilizationSpread": {
+            "numerator": 1,
+            "denominator": 6
+          },
+          "movedBytes": 14,
+          "movedReplicaCount": 4
+        }
+      },
+      "weight": 2.5
+    },
+    {
+      "id": "three_zone_anti_affinity",
+      "description": "Each triple replica shard must span all three zones",
+      "category": "anti-affinity",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 11
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 11
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 11
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 11
+          },
+          {
+            "id": "c1",
+            "zone": "c",
+            "capacity": 11
+          },
+          {
+            "id": "c2",
+            "zone": "c",
+            "capacity": 11
+          }
+        ],
+        "shards": [
+          {
+            "id": "p",
+            "size": 5,
+            "replicationFactor": 3
+          },
+          {
+            "id": "q",
+            "size": 4,
+            "replicationFactor": 3
+          },
+          {
+            "id": "r",
+            "size": 3,
+            "replicationFactor": 3
+          },
+          {
+            "id": "s",
+            "size": 2,
+            "replicationFactor": 3
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "p",
+            "nodeIds": [
+              "a1",
+              "b1",
+              "c1"
+            ]
+          },
+          {
+            "shardId": "q",
+            "nodeIds": [
+              "a1",
+              "b1",
+              "c1"
+            ]
+          },
+          {
+            "shardId": "r",
+            "nodeIds": [
+              "a2",
+              "b2",
+              "c2"
+            ]
+          },
+          {
+            "shardId": "s",
+            "nodeIds": [
+              "a2",
+              "b2",
+              "c2"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "p",
+            "nodeIds": [
+              "a1",
+              "b1",
+              "c1"
+            ]
+          },
+          {
+            "shardId": "q",
+            "nodeIds": [
+              "a2",
+              "b2",
+              "c2"
+            ]
+          },
+          {
+            "shardId": "r",
+            "nodeIds": [
+              "a2",
+              "b2",
+              "c2"
+            ]
+          },
+          {
+            "shardId": "s",
+            "nodeIds": [
+              "a1",
+              "b1",
+              "c1"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 7,
+            "a2": 7,
+            "b1": 7,
+            "b2": 7,
+            "c1": 7,
+            "c2": 7
+          },
+          "maximumUtilization": {
+            "numerator": 7,
+            "denominator": 11
+          },
+          "utilizationSpread": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "movedBytes": 18,
+          "movedReplicaCount": 6
+        }
+      },
+      "weight": 3.0
+    },
+    {
+      "id": "movement_balance_tradeoff",
+      "description": "A feasible zero-move layout loses to better utilization",
+      "category": "movement/balance tradeoff",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 18
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 10
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 18
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 10
+          }
+        ],
+        "shards": [
+          {
+            "id": "hot-a",
+            "size": 6,
+            "replicationFactor": 2
+          },
+          {
+            "id": "hot-b",
+            "size": 6,
+            "replicationFactor": 2
+          },
+          {
+            "id": "cold-a",
+            "size": 3,
+            "replicationFactor": 2
+          },
+          {
+            "id": "cold-b",
+            "size": 3,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "hot-a",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "hot-b",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "cold-a",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "cold-b",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "cold-a",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "cold-b",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "hot-a",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "hot-b",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 12,
+            "a2": 6,
+            "b1": 12,
+            "b2": 6
+          },
+          "maximumUtilization": {
+            "numerator": 2,
+            "denominator": 3
+          },
+          "utilizationSpread": {
+            "numerator": 1,
+            "denominator": 15
+          },
+          "movedBytes": 6,
+          "movedReplicaCount": 2
+        }
+      },
+      "weight": 4.0
+    },
+    {
+      "id": "coordinated_swaps",
+      "description": "Large replicas require coordinated cross-zone swaps",
+      "category": "coordinated swaps",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 10
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 10
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 10
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 10
+          }
+        ],
+        "shards": [
+          {
+            "id": "large-a",
+            "size": 6,
+            "replicationFactor": 2
+          },
+          {
+            "id": "large-b",
+            "size": 6,
+            "replicationFactor": 2
+          },
+          {
+            "id": "small-a",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "small-b",
+            "size": 4,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "large-a",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "large-b",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "small-a",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "small-b",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          }
+        ],
+        "exclusions": [
+          {
+            "shardId": "large-a",
+            "nodeId": "b1"
+          },
+          {
+            "shardId": "large-b",
+            "nodeId": "a1"
+          }
+        ]
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "large-a",
+            "nodeIds": [
+              "a1",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "large-b",
+            "nodeIds": [
+              "a2",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "small-a",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "small-b",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 10,
+            "a2": 10,
+            "b1": 10,
+            "b2": 10
+          },
+          "maximumUtilization": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "utilizationSpread": {
+            "numerator": 0,
+            "denominator": 1
+          },
+          "movedBytes": 20,
+          "movedReplicaCount": 4
+        }
+      },
+      "weight": 4.0
+    },
+    {
+      "id": "movement_tiebreak",
+      "description": "Equal balance is resolved by bytes before replica count",
+      "category": "movement tie-breaking",
+      "problem": {
+        "nodes": [
+          {
+            "id": "a1",
+            "zone": "a",
+            "capacity": 14
+          },
+          {
+            "id": "a2",
+            "zone": "a",
+            "capacity": 14
+          },
+          {
+            "id": "b1",
+            "zone": "b",
+            "capacity": 14
+          },
+          {
+            "id": "b2",
+            "zone": "b",
+            "capacity": 14
+          }
+        ],
+        "shards": [
+          {
+            "id": "large",
+            "size": 6,
+            "replicationFactor": 2
+          },
+          {
+            "id": "medium",
+            "size": 4,
+            "replicationFactor": 2
+          },
+          {
+            "id": "tiny-a",
+            "size": 2,
+            "replicationFactor": 2
+          },
+          {
+            "id": "tiny-b",
+            "size": 2,
+            "replicationFactor": 2
+          }
+        ],
+        "currentPlacements": [
+          {
+            "shardId": "large",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "medium",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "tiny-a",
+            "nodeIds": [
+              "a1",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "tiny-b",
+            "nodeIds": [
+              "a2",
+              "b1"
+            ]
+          }
+        ],
+        "exclusions": []
+      },
+      "reference": {
+        "targetPlacements": [
+          {
+            "shardId": "large",
+            "nodeIds": [
+              "a1",
+              "b1"
+            ]
+          },
+          {
+            "shardId": "medium",
+            "nodeIds": [
+              "a2",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "tiny-a",
+            "nodeIds": [
+              "a1",
+              "b2"
+            ]
+          },
+          {
+            "shardId": "tiny-b",
+            "nodeIds": [
+              "a2",
+              "b1"
+            ]
+          }
+        ],
+        "metrics": {
+          "nodeLoads": {
+            "a1": 8,
+            "a2": 6,
+            "b1": 8,
+            "b2": 6
+          },
+          "maximumUtilization": {
+            "numerator": 4,
+            "denominator": 7
+          },
+          "utilizationSpread": {
+            "numerator": 1,
+            "denominator": 7
+          },
+          "movedBytes": 0,
+          "movedReplicaCount": 0
+        }
+      },
+      "weight": 2.5
+    }
+  ],
+  "probe_case_id": "coordinated_swaps",
+  "showcase_case_id": "three_zone_anti_affinity"
+}

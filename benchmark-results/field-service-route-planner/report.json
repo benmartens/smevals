@@ -1,0 +1,227 @@
+{
+  "eval": "field-service-route-planner",
+  "grader": "default",
+  "grader_version": "f2af056",
+  "excluded_failed_runs": 0,
+  "rows": [
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "claude-opus-4.8",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-4.8\\2026-08-07T22-05-56Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "claude-opus-5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "claude-sonnet-4.6",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-sonnet-4.6\\2026-08-07T21-58-13Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "claude-sonnet-5",
+      "outcome": "pass",
+      "score": 0.999969,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 0.997641,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-sonnet-5\\2026-08-07T21-48-35Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gemini-3.1-pro-preview",
+      "outcome": "fail",
+      "score": 0.0,
+      "tags": [
+        "asymmetric_travel",
+        "clustering",
+        "cross_technician",
+        "invalid_routes",
+        "ordering",
+        "skills",
+        "time_windows",
+        "value_tradeoff",
+        "value_trap",
+        "waiting"
+      ],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 0.0,
+        "average_value_ratio": 0.0,
+        "average_travel_ratio": 0.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gemini-3.1-pro-preview\\2026-08-07T22-16-16Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gemini-3.6-flash",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gemini-3.6-flash\\2026-08-07T22-16-50Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gpt-5-mini",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gpt-5-mini\\2026-08-07T21-11-09Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gpt-5.3-codex",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gpt-5.3-codex\\2026-08-07T21-13-51Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gpt-5.6-luna",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gpt-5.6-luna\\2026-08-07T21-30-03Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gpt-5.6-sol",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gpt-5.6-sol\\2026-08-07T21-18-27Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "gpt-5.6-terra",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\gpt-5.6-terra\\2026-08-07T21-23-54Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "grok-4.5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\grok-4.5\\2026-08-07T22-21-29Z"
+    },
+    {
+      "task": "implement-planner",
+      "config": "copilot",
+      "model": "mai-code-1-flash-picker",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [],
+      "metrics": {
+        "build_succeeded": true,
+        "valid_route_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_travel_ratio": 1.0,
+        "deterministic": true
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\mai-code-1-flash-picker\\2026-08-07T22-27-09Z"
+    }
+  ]
+}

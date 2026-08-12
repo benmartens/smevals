@@ -1,0 +1,18 @@
+{
+  "targetPlacements": [
+    {
+      "shardId": "orders",
+      "nodeIds": [
+        "node-a",
+        "node-c"
+      ]
+    },
+    {
+      "shardId": "users",
+      "nodeIds": [
+        "node-b",
+        "node-d"
+      ]
+    }
+  ]
+}

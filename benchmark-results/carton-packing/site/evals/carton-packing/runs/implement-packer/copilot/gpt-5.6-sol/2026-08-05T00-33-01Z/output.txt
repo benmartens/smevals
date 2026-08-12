@@ -1,0 +1,3 @@
+Implemented `CartonPacker.Pack` using deterministic greedy and value-bounded beam search across legal rotations and supported anchor points. Results maximize value first, volume second, and are canonically sorted.
+
+`dotnet run --project visible-tests\CartonPacking.VisibleTests` passes **9/9**. CLI validator also passed supplied and adversarial scenarios.

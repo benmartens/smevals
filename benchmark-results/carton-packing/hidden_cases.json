@@ -1,0 +1,2295 @@
+{
+  "schema_version": 1,
+  "seed": 1340041565,
+  "cases": [
+    {
+      "id": "exact_basic",
+      "description": "Single carton fills container exactly",
+      "weight": 0.25,
+      "problem": {
+        "container": {
+          "width": 6,
+          "depth": 7,
+          "height": 12,
+          "maxWeight": 10
+        },
+        "cartons": [
+          {
+            "id": "exact_fill",
+            "width": 6,
+            "depth": 7,
+            "height": 12,
+            "quantity": 1,
+            "weight": 5,
+            "value": 148,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 148,
+        "volume": 504,
+        "placements": [
+          {
+            "cartonId": "exact_fill",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 6,
+            "depth": 7,
+            "height": 12
+          }
+        ]
+      }
+    },
+    {
+      "id": "rotation_required",
+      "description": "Must rotate: original width exceeds container width; rotated orientation always fits",
+      "weight": 0.25,
+      "problem": {
+        "container": {
+          "width": 4,
+          "depth": 9,
+          "height": 5,
+          "maxWeight": 20
+        },
+        "cartons": [
+          {
+            "id": "rot_item",
+            "width": 7,
+            "depth": 3,
+            "height": 5,
+            "quantity": 1,
+            "weight": 8,
+            "value": 21,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 21,
+        "volume": 105,
+        "placements": [
+          {
+            "cartonId": "rot_item",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 3,
+            "depth": 7,
+            "height": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "weight_value_tradeoff",
+      "description": "Greedy-by-value picks heavy item; optimal picks two lighter items for more total value",
+      "weight": 3.0,
+      "problem": {
+        "container": {
+          "width": 6,
+          "depth": 6,
+          "height": 6,
+          "maxWeight": 10
+        },
+        "cartons": [
+          {
+            "id": "heavy_item",
+            "width": 6,
+            "depth": 6,
+            "height": 3,
+            "quantity": 1,
+            "weight": 8,
+            "value": 41,
+            "keepUpright": false
+          },
+          {
+            "id": "light_a",
+            "width": 6,
+            "depth": 6,
+            "height": 3,
+            "quantity": 1,
+            "weight": 5,
+            "value": 27,
+            "keepUpright": false
+          },
+          {
+            "id": "light_b",
+            "width": 6,
+            "depth": 6,
+            "height": 3,
+            "quantity": 1,
+            "weight": 5,
+            "value": 27,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 54,
+        "volume": 216,
+        "placements": [
+          {
+            "cartonId": "light_a",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 3,
+            "depth": 6,
+            "height": 6
+          },
+          {
+            "cartonId": "light_b",
+            "instance": 0,
+            "x": 3,
+            "y": 0,
+            "z": 0,
+            "width": 3,
+            "depth": 6,
+            "height": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "upright_only",
+      "description": "keepUpright items must not be rotated to lay flat",
+      "weight": 0.25,
+      "problem": {
+        "container": {
+          "width": 18,
+          "depth": 8,
+          "height": 7,
+          "maxWeight": 500
+        },
+        "cartons": [
+          {
+            "id": "upright_item",
+            "width": 4,
+            "depth": 2,
+            "height": 5,
+            "quantity": 6,
+            "weight": 3,
+            "value": 14,
+            "keepUpright": true
+          },
+          {
+            "id": "flat_item",
+            "width": 7,
+            "depth": 6,
+            "height": 1,
+            "quantity": 1,
+            "weight": 4,
+            "value": 8,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 92,
+        "volume": 282,
+        "placements": [
+          {
+            "cartonId": "flat_item",
+            "instance": 0,
+            "x": 8,
+            "y": 0,
+            "z": 0,
+            "width": 1,
+            "depth": 6,
+            "height": 7
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 1,
+            "x": 0,
+            "y": 2,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 2,
+            "x": 0,
+            "y": 4,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 3,
+            "x": 0,
+            "y": 6,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 4,
+            "x": 4,
+            "y": 0,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          },
+          {
+            "cartonId": "upright_item",
+            "instance": 5,
+            "x": 4,
+            "y": 2,
+            "z": 0,
+            "width": 4,
+            "depth": 2,
+            "height": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed_quantities",
+      "description": "Multiple item types and quantities",
+      "weight": 1.0,
+      "problem": {
+        "container": {
+          "width": 12,
+          "depth": 12,
+          "height": 12,
+          "maxWeight": 600
+        },
+        "cartons": [
+          {
+            "id": "sm_cube",
+            "width": 2,
+            "depth": 2,
+            "height": 2,
+            "quantity": 10,
+            "weight": 1,
+            "value": 5,
+            "keepUpright": false
+          },
+          {
+            "id": "rect_bar",
+            "width": 4,
+            "depth": 2,
+            "height": 2,
+            "quantity": 2,
+            "weight": 2,
+            "value": 7,
+            "keepUpright": false
+          },
+          {
+            "id": "slab",
+            "width": 12,
+            "depth": 12,
+            "height": 2,
+            "quantity": 2,
+            "weight": 8,
+            "value": 16,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 96,
+        "volume": 688,
+        "placements": [
+          {
+            "cartonId": "rect_bar",
+            "instance": 0,
+            "x": 4,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 4
+          },
+          {
+            "cartonId": "rect_bar",
+            "instance": 1,
+            "x": 4,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 4
+          },
+          {
+            "cartonId": "slab",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 12,
+            "height": 12
+          },
+          {
+            "cartonId": "slab",
+            "instance": 1,
+            "x": 2,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 12,
+            "height": 12
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 0,
+            "x": 4,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 1,
+            "x": 4,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 2,
+            "x": 4,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 3,
+            "x": 4,
+            "y": 10,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 4,
+            "x": 6,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 5,
+            "x": 6,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 6,
+            "x": 6,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 7,
+            "x": 6,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 8,
+            "x": 6,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "sm_cube",
+            "instance": 9,
+            "x": 6,
+            "y": 10,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "support_stacking",
+      "description": "Three keepUpright slab layers; each must be fully supported by the layer below",
+      "weight": 4.0,
+      "problem": {
+        "container": {
+          "width": 10,
+          "depth": 12,
+          "height": 8,
+          "maxWeight": 300
+        },
+        "cartons": [
+          {
+            "id": "base_slab",
+            "width": 10,
+            "depth": 12,
+            "height": 2,
+            "quantity": 1,
+            "weight": 8,
+            "value": 20,
+            "keepUpright": true
+          },
+          {
+            "id": "mid_half",
+            "width": 10,
+            "depth": 6,
+            "height": 2,
+            "quantity": 2,
+            "weight": 4,
+            "value": 11,
+            "keepUpright": true
+          },
+          {
+            "id": "top_qtr",
+            "width": 5,
+            "depth": 6,
+            "height": 2,
+            "quantity": 4,
+            "weight": 2,
+            "value": 6,
+            "keepUpright": true
+          }
+        ]
+      },
+      "reference": {
+        "value": 66,
+        "volume": 720,
+        "placements": [
+          {
+            "cartonId": "base_slab",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 10,
+            "depth": 12,
+            "height": 2
+          },
+          {
+            "cartonId": "mid_half",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 2,
+            "width": 10,
+            "depth": 6,
+            "height": 2
+          },
+          {
+            "cartonId": "mid_half",
+            "instance": 1,
+            "x": 0,
+            "y": 6,
+            "z": 2,
+            "width": 10,
+            "depth": 6,
+            "height": 2
+          },
+          {
+            "cartonId": "top_qtr",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 4,
+            "width": 5,
+            "depth": 6,
+            "height": 2
+          },
+          {
+            "cartonId": "top_qtr",
+            "instance": 1,
+            "x": 0,
+            "y": 6,
+            "z": 4,
+            "width": 5,
+            "depth": 6,
+            "height": 2
+          },
+          {
+            "cartonId": "top_qtr",
+            "instance": 2,
+            "x": 5,
+            "y": 0,
+            "z": 4,
+            "width": 5,
+            "depth": 6,
+            "height": 2
+          },
+          {
+            "cartonId": "top_qtr",
+            "instance": 3,
+            "x": 5,
+            "y": 6,
+            "z": 4,
+            "width": 5,
+            "depth": 6,
+            "height": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "greedy_trap",
+      "description": "Greedy-by-value and greedy-by-density both pick big_item; optimal packs grid_cap small items for higher total value",
+      "weight": 4.0,
+      "problem": {
+        "container": {
+          "width": 10,
+          "depth": 10,
+          "height": 10,
+          "maxWeight": 2000
+        },
+        "cartons": [
+          {
+            "id": "big_item",
+            "width": 9,
+            "depth": 9,
+            "height": 9,
+            "quantity": 1,
+            "weight": 10,
+            "value": 426,
+            "keepUpright": false
+          },
+          {
+            "id": "small_item",
+            "width": 2,
+            "depth": 2,
+            "height": 2,
+            "quantity": 125,
+            "weight": 1,
+            "value": 4,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 500,
+        "volume": 1000,
+        "placements": [
+          {
+            "cartonId": "small_item",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 1,
+            "x": 0,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 2,
+            "x": 0,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 3,
+            "x": 0,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 4,
+            "x": 0,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 5,
+            "x": 2,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 6,
+            "x": 2,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 7,
+            "x": 2,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 8,
+            "x": 2,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 9,
+            "x": 2,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 10,
+            "x": 4,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 11,
+            "x": 4,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 12,
+            "x": 4,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 13,
+            "x": 4,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 14,
+            "x": 4,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 15,
+            "x": 6,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 16,
+            "x": 6,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 17,
+            "x": 6,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 18,
+            "x": 6,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 19,
+            "x": 6,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 20,
+            "x": 8,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 21,
+            "x": 8,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 22,
+            "x": 8,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 23,
+            "x": 8,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 24,
+            "x": 8,
+            "y": 8,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 25,
+            "x": 0,
+            "y": 0,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 26,
+            "x": 0,
+            "y": 2,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 27,
+            "x": 0,
+            "y": 4,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 28,
+            "x": 0,
+            "y": 6,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 29,
+            "x": 0,
+            "y": 8,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 30,
+            "x": 2,
+            "y": 0,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 31,
+            "x": 2,
+            "y": 2,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 32,
+            "x": 2,
+            "y": 4,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 33,
+            "x": 2,
+            "y": 6,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 34,
+            "x": 2,
+            "y": 8,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 35,
+            "x": 4,
+            "y": 0,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 36,
+            "x": 4,
+            "y": 2,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 37,
+            "x": 4,
+            "y": 4,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 38,
+            "x": 4,
+            "y": 6,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 39,
+            "x": 4,
+            "y": 8,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 40,
+            "x": 6,
+            "y": 0,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 41,
+            "x": 6,
+            "y": 2,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 42,
+            "x": 6,
+            "y": 4,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 43,
+            "x": 6,
+            "y": 6,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 44,
+            "x": 6,
+            "y": 8,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 45,
+            "x": 8,
+            "y": 0,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 46,
+            "x": 8,
+            "y": 2,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 47,
+            "x": 8,
+            "y": 4,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 48,
+            "x": 8,
+            "y": 6,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 49,
+            "x": 8,
+            "y": 8,
+            "z": 2,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 50,
+            "x": 0,
+            "y": 0,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 51,
+            "x": 0,
+            "y": 2,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 52,
+            "x": 0,
+            "y": 4,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 53,
+            "x": 0,
+            "y": 6,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 54,
+            "x": 0,
+            "y": 8,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 55,
+            "x": 2,
+            "y": 0,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 56,
+            "x": 2,
+            "y": 2,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 57,
+            "x": 2,
+            "y": 4,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 58,
+            "x": 2,
+            "y": 6,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 59,
+            "x": 2,
+            "y": 8,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 60,
+            "x": 4,
+            "y": 0,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 61,
+            "x": 4,
+            "y": 2,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 62,
+            "x": 4,
+            "y": 4,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 63,
+            "x": 4,
+            "y": 6,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 64,
+            "x": 4,
+            "y": 8,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 65,
+            "x": 6,
+            "y": 0,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 66,
+            "x": 6,
+            "y": 2,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 67,
+            "x": 6,
+            "y": 4,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 68,
+            "x": 6,
+            "y": 6,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 69,
+            "x": 6,
+            "y": 8,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 70,
+            "x": 8,
+            "y": 0,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 71,
+            "x": 8,
+            "y": 2,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 72,
+            "x": 8,
+            "y": 4,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 73,
+            "x": 8,
+            "y": 6,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 74,
+            "x": 8,
+            "y": 8,
+            "z": 4,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 75,
+            "x": 0,
+            "y": 0,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 76,
+            "x": 0,
+            "y": 2,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 77,
+            "x": 0,
+            "y": 4,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 78,
+            "x": 0,
+            "y": 6,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 79,
+            "x": 0,
+            "y": 8,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 80,
+            "x": 2,
+            "y": 0,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 81,
+            "x": 2,
+            "y": 2,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 82,
+            "x": 2,
+            "y": 4,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 83,
+            "x": 2,
+            "y": 6,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 84,
+            "x": 2,
+            "y": 8,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 85,
+            "x": 4,
+            "y": 0,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 86,
+            "x": 4,
+            "y": 2,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 87,
+            "x": 4,
+            "y": 4,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 88,
+            "x": 4,
+            "y": 6,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 89,
+            "x": 4,
+            "y": 8,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 90,
+            "x": 6,
+            "y": 0,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 91,
+            "x": 6,
+            "y": 2,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 92,
+            "x": 6,
+            "y": 4,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 93,
+            "x": 6,
+            "y": 6,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 94,
+            "x": 6,
+            "y": 8,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 95,
+            "x": 8,
+            "y": 0,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 96,
+            "x": 8,
+            "y": 2,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 97,
+            "x": 8,
+            "y": 4,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 98,
+            "x": 8,
+            "y": 6,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 99,
+            "x": 8,
+            "y": 8,
+            "z": 6,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 100,
+            "x": 0,
+            "y": 0,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 101,
+            "x": 0,
+            "y": 2,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 102,
+            "x": 0,
+            "y": 4,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 103,
+            "x": 0,
+            "y": 6,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 104,
+            "x": 0,
+            "y": 8,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 105,
+            "x": 2,
+            "y": 0,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 106,
+            "x": 2,
+            "y": 2,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 107,
+            "x": 2,
+            "y": 4,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 108,
+            "x": 2,
+            "y": 6,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 109,
+            "x": 2,
+            "y": 8,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 110,
+            "x": 4,
+            "y": 0,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 111,
+            "x": 4,
+            "y": 2,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 112,
+            "x": 4,
+            "y": 4,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 113,
+            "x": 4,
+            "y": 6,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 114,
+            "x": 4,
+            "y": 8,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 115,
+            "x": 6,
+            "y": 0,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 116,
+            "x": 6,
+            "y": 2,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 117,
+            "x": 6,
+            "y": 4,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 118,
+            "x": 6,
+            "y": 6,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 119,
+            "x": 6,
+            "y": 8,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 120,
+            "x": 8,
+            "y": 0,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 121,
+            "x": 8,
+            "y": 2,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 122,
+            "x": 8,
+            "y": 4,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 123,
+            "x": 8,
+            "y": 6,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "small_item",
+            "instance": 124,
+            "x": 8,
+            "y": 8,
+            "z": 8,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "dense_showcase",
+      "description": "Dense mixed scenario: deterministic probe case",
+      "weight": 1.0,
+      "problem": {
+        "container": {
+          "width": 19,
+          "depth": 12,
+          "height": 14,
+          "maxWeight": 400
+        },
+        "cartons": [
+          {
+            "id": "book",
+            "width": 6,
+            "depth": 3,
+            "height": 1,
+            "quantity": 7,
+            "weight": 2,
+            "value": 12,
+            "keepUpright": false
+          },
+          {
+            "id": "vase",
+            "width": 3,
+            "depth": 2,
+            "height": 10,
+            "quantity": 2,
+            "weight": 3,
+            "value": 22,
+            "keepUpright": true
+          },
+          {
+            "id": "box_med",
+            "width": 4,
+            "depth": 4,
+            "height": 4,
+            "quantity": 6,
+            "weight": 6,
+            "value": 13,
+            "keepUpright": false
+          },
+          {
+            "id": "plank",
+            "width": 8,
+            "depth": 2,
+            "height": 1,
+            "quantity": 6,
+            "weight": 3,
+            "value": 8,
+            "keepUpright": false
+          },
+          {
+            "id": "tiny_cube",
+            "width": 2,
+            "depth": 2,
+            "height": 2,
+            "quantity": 14,
+            "weight": 1,
+            "value": 5,
+            "keepUpright": false
+          }
+        ]
+      },
+      "reference": {
+        "value": 324,
+        "volume": 838,
+        "placements": [
+          {
+            "cartonId": "book",
+            "instance": 0,
+            "x": 8,
+            "y": 4,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 1,
+            "x": 8,
+            "y": 7,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 2,
+            "x": 9,
+            "y": 4,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 3,
+            "x": 9,
+            "y": 7,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 4,
+            "x": 10,
+            "y": 4,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 5,
+            "x": 10,
+            "y": 7,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "book",
+            "instance": 6,
+            "x": 11,
+            "y": 0,
+            "z": 0,
+            "width": 1,
+            "depth": 3,
+            "height": 6
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 0,
+            "x": 0,
+            "y": 4,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 1,
+            "x": 0,
+            "y": 8,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 2,
+            "x": 3,
+            "y": 0,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 3,
+            "x": 4,
+            "y": 4,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 4,
+            "x": 4,
+            "y": 8,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "box_med",
+            "instance": 5,
+            "x": 7,
+            "y": 0,
+            "z": 0,
+            "width": 4,
+            "depth": 4,
+            "height": 4
+          },
+          {
+            "cartonId": "plank",
+            "instance": 0,
+            "x": 8,
+            "y": 10,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "plank",
+            "instance": 1,
+            "x": 9,
+            "y": 10,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "plank",
+            "instance": 2,
+            "x": 10,
+            "y": 10,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "plank",
+            "instance": 3,
+            "x": 11,
+            "y": 3,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "plank",
+            "instance": 4,
+            "x": 11,
+            "y": 5,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "plank",
+            "instance": 5,
+            "x": 11,
+            "y": 7,
+            "z": 0,
+            "width": 1,
+            "depth": 2,
+            "height": 8
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 0,
+            "x": 11,
+            "y": 9,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 1,
+            "x": 12,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 2,
+            "x": 12,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 3,
+            "x": 12,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 4,
+            "x": 12,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 5,
+            "x": 13,
+            "y": 9,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 6,
+            "x": 14,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 7,
+            "x": 14,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 8,
+            "x": 14,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 9,
+            "x": 14,
+            "y": 6,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 10,
+            "x": 15,
+            "y": 9,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 11,
+            "x": 16,
+            "y": 0,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 12,
+            "x": 16,
+            "y": 2,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "tiny_cube",
+            "instance": 13,
+            "x": 16,
+            "y": 4,
+            "z": 0,
+            "width": 2,
+            "depth": 2,
+            "height": 2
+          },
+          {
+            "cartonId": "vase",
+            "instance": 0,
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "width": 3,
+            "depth": 2,
+            "height": 10
+          },
+          {
+            "cartonId": "vase",
+            "instance": 1,
+            "x": 0,
+            "y": 2,
+            "z": 0,
+            "width": 3,
+            "depth": 2,
+            "height": 10
+          }
+        ]
+      }
+    }
+  ],
+  "probe_case_id": "dense_showcase"
+}

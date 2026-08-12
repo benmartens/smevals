@@ -1,0 +1,872 @@
+{
+  "schema_version": 1,
+  "seed": 738871357,
+  "cases": [
+    {
+      "id": "skills",
+      "description": "Single- and multi-skill assignment",
+      "tags": [
+        "skills"
+      ],
+      "problem": {
+        "depot": "hub",
+        "travelTimes": {
+          "hub": {
+            "hub": 0,
+            "panel": 8,
+            "sink": 7,
+            "plant": 12
+          },
+          "panel": {
+            "hub": 9,
+            "panel": 0,
+            "sink": 18,
+            "plant": 18
+          },
+          "sink": {
+            "hub": 8,
+            "panel": 18,
+            "sink": 0,
+            "plant": 18
+          },
+          "plant": {
+            "hub": 11,
+            "panel": 18,
+            "sink": 18,
+            "plant": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "electric",
+            "skills": [
+              "electrical"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 130
+          },
+          {
+            "id": "multi",
+            "skills": [
+              "electrical",
+              "plumbing"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 130
+          },
+          {
+            "id": "plumber",
+            "skills": [
+              "plumbing"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 130
+          }
+        ],
+        "jobs": [
+          {
+            "id": "breaker",
+            "location": "panel",
+            "requiredSkills": [
+              "electrical"
+            ],
+            "duration": 18,
+            "windowStart": 0,
+            "windowEnd": 100,
+            "value": 16
+          },
+          {
+            "id": "leak",
+            "location": "sink",
+            "requiredSkills": [
+              "plumbing"
+            ],
+            "duration": 20,
+            "windowStart": 0,
+            "windowEnd": 100,
+            "value": 17
+          },
+          {
+            "id": "pump",
+            "location": "plant",
+            "requiredSkills": [
+              "electrical",
+              "plumbing"
+            ],
+            "duration": 25,
+            "windowStart": 10,
+            "windowEnd": 115,
+            "value": 25
+          }
+        ]
+      },
+      "weight": 0.5,
+      "reference": {
+        "servedValue": 58,
+        "totalTravel": 52,
+        "routes": [
+          {
+            "technicianId": "electric",
+            "jobIds": []
+          },
+          {
+            "technicianId": "multi",
+            "jobIds": [
+              "breaker",
+              "pump"
+            ]
+          },
+          {
+            "technicianId": "plumber",
+            "jobIds": [
+              "leak"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "time_windows",
+      "description": "Early job must precede a later-window job",
+      "tags": [
+        "time_windows",
+        "ordering"
+      ],
+      "problem": {
+        "depot": "depot",
+        "travelTimes": {
+          "depot": {
+            "depot": 0,
+            "early-site": 6,
+            "late-site": 8
+          },
+          "early-site": {
+            "depot": 6,
+            "early-site": 0,
+            "late-site": 8
+          },
+          "late-site": {
+            "depot": 7,
+            "early-site": 22,
+            "late-site": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "tech",
+            "skills": [
+              "repair"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 100
+          }
+        ],
+        "jobs": [
+          {
+            "id": "late",
+            "location": "late-site",
+            "requiredSkills": [
+              "repair"
+            ],
+            "duration": 15,
+            "windowStart": 45,
+            "windowEnd": 80,
+            "value": 18
+          },
+          {
+            "id": "early",
+            "location": "early-site",
+            "requiredSkills": [
+              "repair"
+            ],
+            "duration": 12,
+            "windowStart": 0,
+            "windowEnd": 30,
+            "value": 15
+          }
+        ]
+      },
+      "weight": 1.5,
+      "reference": {
+        "servedValue": 33,
+        "totalTravel": 21,
+        "routes": [
+          {
+            "technicianId": "tech",
+            "jobIds": [
+              "early",
+              "late"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clustering",
+      "description": "A compact cluster beats one distant job",
+      "tags": [
+        "clustering",
+        "value_tradeoff"
+      ],
+      "problem": {
+        "depot": "depot",
+        "travelTimes": {
+          "depot": {
+            "depot": 0,
+            "far": 25,
+            "c1": 5,
+            "c2": 6,
+            "c3": 6
+          },
+          "far": {
+            "depot": 25,
+            "far": 0,
+            "c1": 30,
+            "c2": 30,
+            "c3": 30
+          },
+          "c1": {
+            "depot": 5,
+            "far": 30,
+            "c1": 0,
+            "c2": 2,
+            "c3": 3
+          },
+          "c2": {
+            "depot": 5,
+            "far": 30,
+            "c1": 2,
+            "c2": 0,
+            "c3": 2
+          },
+          "c3": {
+            "depot": 5,
+            "far": 30,
+            "c1": 3,
+            "c2": 2,
+            "c3": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "tech",
+            "skills": [
+              "inspect"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 62
+          }
+        ],
+        "jobs": [
+          {
+            "id": "far-first",
+            "location": "far",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 10,
+            "windowStart": 0,
+            "windowEnd": 55,
+            "value": 20
+          },
+          {
+            "id": "cluster-1",
+            "location": "c1",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 9,
+            "windowStart": 0,
+            "windowEnd": 55,
+            "value": 8
+          },
+          {
+            "id": "cluster-2",
+            "location": "c2",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 9,
+            "windowStart": 0,
+            "windowEnd": 55,
+            "value": 8
+          },
+          {
+            "id": "cluster-3",
+            "location": "c3",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 9,
+            "windowStart": 0,
+            "windowEnd": 55,
+            "value": 8
+          }
+        ]
+      },
+      "weight": 2.5,
+      "reference": {
+        "servedValue": 24,
+        "totalTravel": 14,
+        "routes": [
+          {
+            "technicianId": "tech",
+            "jobIds": [
+              "cluster-1",
+              "cluster-2",
+              "cluster-3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "value_trap",
+      "description": "Two moderate jobs beat one high individual value",
+      "tags": [
+        "value_trap"
+      ],
+      "problem": {
+        "depot": "base",
+        "travelTimes": {
+          "base": {
+            "base": 0,
+            "large": 11,
+            "left": 5,
+            "right": 5
+          },
+          "large": {
+            "base": 11,
+            "large": 0,
+            "left": 24,
+            "right": 24
+          },
+          "left": {
+            "base": 5,
+            "large": 24,
+            "left": 0,
+            "right": 4
+          },
+          "right": {
+            "base": 5,
+            "large": 24,
+            "left": 4,
+            "right": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "tech",
+            "skills": [
+              "repair"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 50
+          }
+        ],
+        "jobs": [
+          {
+            "id": "large-first",
+            "location": "large",
+            "requiredSkills": [
+              "repair"
+            ],
+            "duration": 22,
+            "windowStart": 0,
+            "windowEnd": 45,
+            "value": 19
+          },
+          {
+            "id": "small-left",
+            "location": "left",
+            "requiredSkills": [
+              "repair"
+            ],
+            "duration": 7,
+            "windowStart": 0,
+            "windowEnd": 40,
+            "value": 11
+          },
+          {
+            "id": "small-right",
+            "location": "right",
+            "requiredSkills": [
+              "repair"
+            ],
+            "duration": 7,
+            "windowStart": 0,
+            "windowEnd": 40,
+            "value": 11
+          }
+        ]
+      },
+      "weight": 3.0,
+      "reference": {
+        "servedValue": 22,
+        "totalTravel": 14,
+        "routes": [
+          {
+            "technicianId": "tech",
+            "jobIds": [
+              "small-left",
+              "small-right"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "waiting",
+      "description": "Waiting is required between appointments",
+      "tags": [
+        "waiting",
+        "time_windows"
+      ],
+      "problem": {
+        "depot": "yard",
+        "travelTimes": {
+          "yard": {
+            "yard": 0,
+            "north": 7,
+            "south": 13,
+            "east": 10
+          },
+          "north": {
+            "yard": 8,
+            "north": 0,
+            "south": 8,
+            "east": 10
+          },
+          "south": {
+            "yard": 10,
+            "north": 9,
+            "south": 0,
+            "east": 6
+          },
+          "east": {
+            "yard": 8,
+            "north": 10,
+            "south": 6,
+            "east": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "tech",
+            "skills": [
+              "inspect"
+            ],
+            "shiftStart": 10,
+            "shiftEnd": 150
+          }
+        ],
+        "jobs": [
+          {
+            "id": "morning",
+            "location": "north",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 12,
+            "windowStart": 20,
+            "windowEnd": 55,
+            "value": 9
+          },
+          {
+            "id": "appointment",
+            "location": "south",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 18,
+            "windowStart": 85,
+            "windowEnd": 115,
+            "value": 18
+          },
+          {
+            "id": "after",
+            "location": "east",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 12,
+            "windowStart": 105,
+            "windowEnd": 135,
+            "value": 12
+          }
+        ]
+      },
+      "weight": 1.0,
+      "reference": {
+        "servedValue": 39,
+        "totalTravel": 29,
+        "routes": [
+          {
+            "technicianId": "tech",
+            "jobIds": [
+              "morning",
+              "appointment",
+              "after"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "asymmetric_travel",
+      "description": "Directed travel makes only one ordering efficient",
+      "tags": [
+        "asymmetric_travel",
+        "ordering"
+      ],
+      "problem": {
+        "depot": "hub",
+        "travelTimes": {
+          "hub": {
+            "hub": 0,
+            "one-way-a": 5,
+            "one-way-b": 4
+          },
+          "one-way-a": {
+            "hub": 20,
+            "one-way-a": 0,
+            "one-way-b": 3
+          },
+          "one-way-b": {
+            "hub": 5,
+            "one-way-a": 30,
+            "one-way-b": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "tech",
+            "skills": [
+              "service"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 58
+          }
+        ],
+        "jobs": [
+          {
+            "id": "b-first-in-input",
+            "location": "one-way-b",
+            "requiredSkills": [
+              "service"
+            ],
+            "duration": 8,
+            "windowStart": 0,
+            "windowEnd": 45,
+            "value": 13
+          },
+          {
+            "id": "a-second-in-input",
+            "location": "one-way-a",
+            "requiredSkills": [
+              "service"
+            ],
+            "duration": 8,
+            "windowStart": 0,
+            "windowEnd": 45,
+            "value": 13
+          }
+        ]
+      },
+      "weight": 2.0,
+      "reference": {
+        "servedValue": 26,
+        "totalTravel": 13,
+        "routes": [
+          {
+            "technicianId": "tech",
+            "jobIds": [
+              "a-second-in-input",
+              "b-first-in-input"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cross_technician",
+      "description": "Reserve the scarce multi-skilled technician",
+      "tags": [
+        "cross_technician",
+        "skills"
+      ],
+      "problem": {
+        "depot": "dispatch",
+        "travelTimes": {
+          "dispatch": {
+            "dispatch": 0,
+            "electric-site": 9,
+            "pipe-site": 9
+          },
+          "electric-site": {
+            "dispatch": 9,
+            "electric-site": 0,
+            "pipe-site": 22
+          },
+          "pipe-site": {
+            "dispatch": 9,
+            "electric-site": 22,
+            "pipe-site": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "a-generalist",
+            "skills": [
+              "electrical",
+              "plumbing"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 48
+          },
+          {
+            "id": "b-plumber",
+            "skills": [
+              "plumbing"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 48
+          }
+        ],
+        "jobs": [
+          {
+            "id": "plumbing-first",
+            "location": "pipe-site",
+            "requiredSkills": [
+              "plumbing"
+            ],
+            "duration": 18,
+            "windowStart": 0,
+            "windowEnd": 42,
+            "value": 15
+          },
+          {
+            "id": "electrical-only",
+            "location": "electric-site",
+            "requiredSkills": [
+              "electrical"
+            ],
+            "duration": 18,
+            "windowStart": 0,
+            "windowEnd": 42,
+            "value": 22
+          }
+        ]
+      },
+      "weight": 3.0,
+      "reference": {
+        "servedValue": 37,
+        "totalTravel": 36,
+        "routes": [
+          {
+            "technicianId": "a-generalist",
+            "jobIds": [
+              "electrical-only"
+            ]
+          },
+          {
+            "technicianId": "b-plumber",
+            "jobIds": [
+              "plumbing-first"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "showcase",
+      "description": "Mixed assignment, windows, clusters, and skills",
+      "tags": [
+        "skills",
+        "time_windows",
+        "clustering",
+        "cross_technician"
+      ],
+      "problem": {
+        "depot": "central",
+        "travelTimes": {
+          "central": {
+            "central": 0,
+            "n1": 8,
+            "n2": 22,
+            "s1": 7,
+            "s2": 22,
+            "remote": 18
+          },
+          "n1": {
+            "central": 8,
+            "n1": 0,
+            "n2": 4,
+            "s1": 22,
+            "s2": 22,
+            "remote": 22
+          },
+          "n2": {
+            "central": 9,
+            "n1": 22,
+            "n2": 0,
+            "s1": 22,
+            "s2": 22,
+            "remote": 12
+          },
+          "s1": {
+            "central": 7,
+            "n1": 22,
+            "n2": 22,
+            "s1": 0,
+            "s2": 4,
+            "remote": 22
+          },
+          "s2": {
+            "central": 8,
+            "n1": 22,
+            "n2": 22,
+            "s1": 22,
+            "s2": 0,
+            "remote": 11
+          },
+          "remote": {
+            "central": 16,
+            "n1": 13,
+            "n2": 22,
+            "s1": 12,
+            "s2": 22,
+            "remote": 0
+          }
+        },
+        "technicians": [
+          {
+            "id": "alpha",
+            "skills": [
+              "electrical",
+              "inspect"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 145
+          },
+          {
+            "id": "beta",
+            "skills": [
+              "plumbing",
+              "inspect"
+            ],
+            "shiftStart": 5,
+            "shiftEnd": 150
+          },
+          {
+            "id": "gamma",
+            "skills": [
+              "electrical",
+              "plumbing"
+            ],
+            "shiftStart": 0,
+            "shiftEnd": 135
+          }
+        ],
+        "jobs": [
+          {
+            "id": "n-panel",
+            "location": "n1",
+            "requiredSkills": [
+              "electrical"
+            ],
+            "duration": 16,
+            "windowStart": 0,
+            "windowEnd": 70,
+            "value": 18
+          },
+          {
+            "id": "n-inspect",
+            "location": "n2",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 12,
+            "windowStart": 20,
+            "windowEnd": 95,
+            "value": 12
+          },
+          {
+            "id": "s-leak",
+            "location": "s1",
+            "requiredSkills": [
+              "plumbing"
+            ],
+            "duration": 20,
+            "windowStart": 0,
+            "windowEnd": 80,
+            "value": 19
+          },
+          {
+            "id": "s-audit",
+            "location": "s2",
+            "requiredSkills": [
+              "inspect"
+            ],
+            "duration": 14,
+            "windowStart": 60,
+            "windowEnd": 125,
+            "value": 14
+          },
+          {
+            "id": "remote-pump",
+            "location": "remote",
+            "requiredSkills": [
+              "electrical",
+              "plumbing"
+            ],
+            "duration": 24,
+            "windowStart": 30,
+            "windowEnd": 120,
+            "value": 31
+          },
+          {
+            "id": "late-panel",
+            "location": "n1",
+            "requiredSkills": [
+              "electrical"
+            ],
+            "duration": 15,
+            "windowStart": 85,
+            "windowEnd": 130,
+            "value": 16
+          }
+        ]
+      },
+      "weight": 1.5,
+      "reference": {
+        "servedValue": 110,
+        "totalTravel": 79,
+        "routes": [
+          {
+            "technicianId": "alpha",
+            "jobIds": [
+              "n-panel",
+              "n-inspect"
+            ]
+          },
+          {
+            "technicianId": "beta",
+            "jobIds": [
+              "s-leak",
+              "s-audit"
+            ]
+          },
+          {
+            "technicianId": "gamma",
+            "jobIds": [
+              "remote-pump",
+              "late-panel"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "probe_case_id": "showcase"
+}

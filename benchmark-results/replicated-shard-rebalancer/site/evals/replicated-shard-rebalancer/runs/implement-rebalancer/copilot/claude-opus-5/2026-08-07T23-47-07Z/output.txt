@@ -1,0 +1,11 @@
+Implementation is complete and passing, with one in-progress tuning edit left unfinished.
+
+**Algorithm** (`src/ReplicatedShardRebalancer/RebalanceSolver.cs`, called from `Rebalance`):
+1. **Normalize** — nodes/shards sorted ordinally, zones interned, per-shard allowed pool = non-excluded nodes with `capacity >= size`; required zone diversity = `min(RF, distinct zones in pool)`.
+2. **Candidate enumeration** — all RF-subsets per shard in lexicographic order, pruned by zone-coverage bounds (skipped if the pool explodes past caps).
+3. **Three greedy seeds** (min resulting utilization / max slack / current-preserving) followed by **local search** (full-candidate or single-replacement reassignment, plus cross-shard replica swaps) over the objective `(overflow, maxUtil, spread, movedBytes, movedReplicas)`; overflow leads so infeasible seeds self-repair.
+4. **Branch-and-bound** — DFS in sorted shard order with lower bounds on max utilization (weighted average + node budget availability), spread, moved bytes, and replicas. Pass 1 proves the optimal objective tuple; pass 2 replays in lex order so the ordinally smallest placement wins remaining ties. All limits are step-based, not time-based, so output stays deterministic.
+
+**Tests run:** `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` → **9/9 pass**. A temporary fuzz harness compared 241 tiny instances against exhaustive brute force — objective tuple *and* exact canonical placement matched every time; 46 larger instances (up to 24 nodes / 30 shards) produced valid placements.
+
+**Remaining work:** I was mid-edit reducing worst-case runtime (~9.9s on the largest fuzz instances). `ExactWorkBudget` and `_searchLimit` fields are added but not yet wired up — `Explore` still checks `ExactBudget`. To finish: set `_searchLimit = Math.Clamp(ExactWorkBudget / Math.Max(_nodeCount, 1), 200_000, ExactBudget)` in `ExactSearch`, have `Explore` compare against `_searchLimit`, and stop resetting `_searchSteps` before pass 2 so both passes share one budget. Also delete the temporary `tmpfuzz.cs` at the workspace root.

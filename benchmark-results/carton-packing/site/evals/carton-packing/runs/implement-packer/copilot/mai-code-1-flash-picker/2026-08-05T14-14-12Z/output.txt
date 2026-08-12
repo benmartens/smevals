@@ -1,0 +1,5 @@
+Implemented a deterministic 3D carton packer in `src/CartonPacking/CartonPacker.cs` using a backtracking search over discrete unit cells. It enforces overlap, rotation/orientation rules, weight/quantity limits, full-base support, and canonical placement ordering, and it optimizes for total value first and packed volume second. The public JSON/CLI contract remains unchanged.
+
+Tests run:
+- `dotnet run --project visible-tests\CartonPacking.VisibleTests`
+- `dotnet run --project src\CartonPacking.Cli -- scenarios\exact-fit.json result.json`

@@ -1,0 +1,11 @@
+**Done.** `CartonPacker.Pack` is implemented; **9/9** visible tests passed.
+
+**Algorithm**
+- Expand carton instances with legal orientations
+- Multi-heuristic greedy extreme-point packing (sort by value, value/weight, value/volume, size, etc.)
+- Weight knapsack subsets (max value, then volume) re-packed greedily
+- Small-instance DFS with pruning
+- Place only at grid extreme points with no overlap + full-base support; pick lowest Z/Y/X
+- Keep best valid layout by value, then volume; emit canonical sort
+
+**Tests:** `dotnet run --project visible-tests\CartonPacking.VisibleTests`

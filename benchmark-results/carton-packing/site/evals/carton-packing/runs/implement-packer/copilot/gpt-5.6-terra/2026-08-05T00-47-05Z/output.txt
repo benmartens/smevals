@@ -1,0 +1,3 @@
+Implemented deterministic 3D packing with support-safe height maps, bounded exact search, knapsack-guided selection, and a scalable free-space fallback. Placements honor orientation, weight, quantity, support, and canonical ordering rules.
+
+Tests: `dotnet run --project visible-tests\CartonPacking.VisibleTests` — **9/9 passed**.

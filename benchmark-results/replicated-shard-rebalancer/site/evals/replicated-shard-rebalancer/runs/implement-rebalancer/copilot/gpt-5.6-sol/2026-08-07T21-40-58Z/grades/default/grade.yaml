@@ -1,0 +1,317 @@
+grader: default
+graded: '2026-08-08T00:03:14.172332+00:00'
+outcome: pass
+score: 1.0
+tags:
+- all_valid
+- deterministic
+- high_score
+checks:
+- checker: ../checkers/grade-replicated-shard-rebalancer.py
+  ok: true
+  score: 1.0
+  metrics:
+    build_ok: true
+    valid_target_rate: 1.0
+    average_objective_score: 1.0
+    deterministic: true
+    hidden_cases_valid: 8
+    hidden_cases_total: 8
+    runtime_ms: 4654
+  tags:
+  - all_valid
+  - deterministic
+  - high_score
+  notes: All cases valid and deterministic
+  details:
+    per_case_details:
+    - case_id: overloaded_pair
+      category: overload
+      weight: 2.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 8
+          a2: 8
+          b1: 8
+          b2: 8
+        maximumUtilization:
+          numerator: 4
+          denominator: 7
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 16
+        movedReplicaCount: 4
+      reference:
+        nodeLoads:
+          a1: 8
+          a2: 8
+          b1: 8
+          b2: 8
+        maximumUtilization:
+          numerator: 4
+          denominator: 7
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 16
+        movedReplicaCount: 4
+      issues: []
+      runtime_ms: 235
+    - case_id: uneven_shard_sizes
+      category: uneven shard sizes
+      weight: 3.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          n1: 7
+          n2: 7
+          n3: 7
+          n4: 6
+          n5: 5
+        maximumUtilization:
+          numerator: 7
+          denominator: 13
+        utilizationSpread:
+          numerator: 14
+          denominator: 195
+        movedBytes: 13
+        movedReplicaCount: 4
+      reference:
+        nodeLoads:
+          n1: 7
+          n2: 7
+          n3: 7
+          n4: 6
+          n5: 5
+        maximumUtilization:
+          numerator: 7
+          denominator: 13
+        utilizationSpread:
+          numerator: 14
+          denominator: 195
+        movedBytes: 13
+        movedReplicaCount: 4
+      issues: []
+      runtime_ms: 225
+    - case_id: zone_scarcity
+      category: zone scarcity
+      weight: 2.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 6
+          a2: 7
+          a3: 5
+          b1: 5
+          b2: 4
+        maximumUtilization:
+          numerator: 7
+          denominator: 12
+        utilizationSpread:
+          numerator: 11
+          denominator: 60
+        movedBytes: 9
+        movedReplicaCount: 3
+      reference:
+        nodeLoads:
+          a1: 6
+          a2: 7
+          a3: 5
+          b1: 5
+          b2: 4
+        maximumUtilization:
+          numerator: 7
+          denominator: 12
+        utilizationSpread:
+          numerator: 11
+          denominator: 60
+        movedBytes: 9
+        movedReplicaCount: 3
+      issues: []
+      runtime_ms: 229
+    - case_id: maintenance_exclusions
+      category: exclusions
+      weight: 2.5
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          c1: 6
+          e1: 7
+          e2: 5
+          w1: 5
+          w2: 5
+        maximumUtilization:
+          numerator: 7
+          denominator: 12
+        utilizationSpread:
+          numerator: 1
+          denominator: 6
+        movedBytes: 14
+        movedReplicaCount: 4
+      reference:
+        nodeLoads:
+          c1: 6
+          e1: 7
+          e2: 5
+          w1: 5
+          w2: 5
+        maximumUtilization:
+          numerator: 7
+          denominator: 12
+        utilizationSpread:
+          numerator: 1
+          denominator: 6
+        movedBytes: 14
+        movedReplicaCount: 4
+      issues: []
+      runtime_ms: 232
+    - case_id: three_zone_anti_affinity
+      category: anti-affinity
+      weight: 3.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 7
+          a2: 7
+          b1: 7
+          b2: 7
+          c1: 7
+          c2: 7
+        maximumUtilization:
+          numerator: 7
+          denominator: 11
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 18
+        movedReplicaCount: 6
+      reference:
+        nodeLoads:
+          a1: 7
+          a2: 7
+          b1: 7
+          b2: 7
+          c1: 7
+          c2: 7
+        maximumUtilization:
+          numerator: 7
+          denominator: 11
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 18
+        movedReplicaCount: 6
+      issues: []
+      runtime_ms: 227
+    - case_id: movement_balance_tradeoff
+      category: movement/balance tradeoff
+      weight: 4.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 12
+          a2: 6
+          b1: 12
+          b2: 6
+        maximumUtilization:
+          numerator: 2
+          denominator: 3
+        utilizationSpread:
+          numerator: 1
+          denominator: 15
+        movedBytes: 6
+        movedReplicaCount: 2
+      reference:
+        nodeLoads:
+          a1: 12
+          a2: 6
+          b1: 12
+          b2: 6
+        maximumUtilization:
+          numerator: 2
+          denominator: 3
+        utilizationSpread:
+          numerator: 1
+          denominator: 15
+        movedBytes: 6
+        movedReplicaCount: 2
+      issues: []
+      runtime_ms: 226
+    - case_id: coordinated_swaps
+      category: coordinated swaps
+      weight: 4.0
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 10
+          a2: 10
+          b1: 10
+          b2: 10
+        maximumUtilization:
+          numerator: 1
+          denominator: 1
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 20
+        movedReplicaCount: 4
+      reference:
+        nodeLoads:
+          a1: 10
+          a2: 10
+          b1: 10
+          b2: 10
+        maximumUtilization:
+          numerator: 1
+          denominator: 1
+        utilizationSpread:
+          numerator: 0
+          denominator: 1
+        movedBytes: 20
+        movedReplicaCount: 4
+      issues: []
+      runtime_ms: 243
+    - case_id: movement_tiebreak
+      category: movement tie-breaking
+      weight: 2.5
+      valid: true
+      score: 1.0
+      candidate:
+        nodeLoads:
+          a1: 8
+          a2: 6
+          b1: 8
+          b2: 6
+        maximumUtilization:
+          numerator: 4
+          denominator: 7
+        utilizationSpread:
+          numerator: 1
+          denominator: 7
+        movedBytes: 0
+        movedReplicaCount: 0
+      reference:
+        nodeLoads:
+          a1: 8
+          a2: 6
+          b1: 8
+          b2: 6
+        maximumUtilization:
+          numerator: 4
+          denominator: 7
+        utilizationSpread:
+          numerator: 1
+          denominator: 7
+        movedBytes: 0
+        movedReplicaCount: 0
+      issues: []
+      runtime_ms: 242

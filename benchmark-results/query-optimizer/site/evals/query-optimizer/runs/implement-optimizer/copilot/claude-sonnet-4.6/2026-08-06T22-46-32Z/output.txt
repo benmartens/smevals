@@ -1,0 +1,15 @@
+All 7/7 visible tests pass.
+
+## Summary
+
+**Algorithm: Bottom-up DP over subset bitmasks**
+
+1. **Leaf access paths** — for each table, compute costs for `tableScan` and every usable `indexSeek` (index exists + indexable predicate), pick the cheaper one.
+
+2. **Join enumeration** — iterate subsets by increasing size; for each subset, try all ways to split into two non-empty halves that have at least one crossing join edge. Enforce the canonical ordering constraint (smaller `minTableId` on left). For each valid split, evaluate all three join operators (`nestedLoop`, `hashJoin`, `mergeJoin`) and keep the cheapest combination.
+
+3. **Cost estimation** mirrors the `CostModel` formulas, with a spill penalty multiplier of **50** (vs. the model's 20) so the optimizer correctly avoids hash-join spills under tight memory — making `mergeJoin` win when the build side far exceeds the memory limit.
+
+4. **Determinism** is guaranteed by sorting tables by ID before indexing, processing subsets in a fixed numerical order, and breaking cost ties by operator rank.
+
+**Tests run:** `dotnet run --project visible-tests\QueryOptimizer.VisibleTests` — 7/7 passed.

@@ -1,0 +1,14 @@
+I've completed the implementation. The cleanup attempts hit a permission restriction (likely an environment guard), but these are just harmless temporary CLI output files, not part of the source tree, so I'll leave them and finalize.
+
+## Summary
+
+**Algorithm** (in `RoutePlanner.cs`): This is a multi-technician VRPTW (vehicle routing with time windows + skills), NP-hard in general, solved with a deterministic construction + local-search heuristic:
+
+1. **Construction — value-first cheapest insertion**: Repeatedly inserts the single (job, technician, position) triple that serves the highest-value feasible job, tie-broken by minimal added travel, then technician/position/job ID for determinism. Feasibility mirrors `RouteValidator`'s timing exactly (directed travel, wait-until-`windowStart`, `serviceEnd ≤ windowEnd`, return ≤ `shiftEnd`).
+2. **Exclusion trials (value traps)**: Tentatively drops 1 or 2 currently-served jobs entirely and greedily refills with everyone else; keeps the change only if it strictly improves (value, then −travel). This is what lets e.g. two smaller jobs displace one blocking high-value job.
+3. **Relocate-and-fill (cross-technician)**: Moves a served job to a different skill-eligible technician, then refills freed capacity — catches cases where reassigning a job across technicians unlocks more total value.
+4. **Travel-only optimization**: Or-opt relocation (same/cross-route) and 2-opt segment reversal reduce total travel once the served set is locked in, without touching value.
+
+All comparisons use ordinal string ordering and strict-improvement acceptance, so repeated calls are identical; a `Stopwatch`-based time budget bounds worst-case runtime on large inputs.
+
+**Tests run**: `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` → **8/8 passed** (validator tests + engine tests: basic plan, skill assignment, value-choice/trap, determinism). Also ran the CLI validator against `scenarios\basic.json` and `scenarios\waiting.json` — both produced valid, optimal, feasible routes (waiting.json correctly serves both jobs with waiting until `windowStart`).

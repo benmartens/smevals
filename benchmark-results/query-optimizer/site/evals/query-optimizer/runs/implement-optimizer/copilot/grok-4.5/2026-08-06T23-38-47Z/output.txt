@@ -1,0 +1,11 @@
+## Summary
+
+Implemented a **deterministic cost-based optimizer** in `QueryOptimizer.Optimize`:
+
+1. **Access paths** — For each table, pick the cheaper of `tableScan` vs legal `indexSeek`s.
+2. **Bushy DP join order** — Enumerate connected subsets (bitmasks), only canonical bipartitions (`min(left) < min(right)`) with a crossing join edge.
+3. **Join methods** — Score `hashJoin`, `mergeJoin`, and `nestedLoop` with the integer cost model (including hash spill). Reject hash when **≥ half the build side spills**, so tight memory picks merge.
+4. **Cardinality** — Uses `CostModel.EstimateRows` so plans match the validator.
+5. **Large graphs (n > 16)** — Left-deep greedy fallback.
+
+**Tests:** `dotnet run --project visible-tests\QueryOptimizer.VisibleTests` → **7/7 passed**.

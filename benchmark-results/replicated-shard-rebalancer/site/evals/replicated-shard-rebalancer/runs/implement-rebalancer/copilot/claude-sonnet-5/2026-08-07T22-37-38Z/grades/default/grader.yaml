@@ -1,0 +1,11 @@
+name: default
+checks:
+  - checker: ../checkers/grade-replicated-shard-rebalancer.py
+    creates:
+      - grading-results.json
+      - summary.md
+      - solution.patch
+      - showcase-cluster.svg
+    required: true
+scoring:
+  pass_threshold: 0.7

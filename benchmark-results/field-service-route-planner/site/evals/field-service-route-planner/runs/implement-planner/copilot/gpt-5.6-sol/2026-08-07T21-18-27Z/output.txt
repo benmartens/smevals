@@ -1,0 +1,3 @@
+Implemented `RoutePlanner.Plan` with exact Pareto route DP and cross-technician subset assignment, maximizing served value before minimizing directed travel. Handles skills, windows, waiting, shifts, asymmetric travel, and deterministic ordering.
+
+**Tests:** 8/8 visible tests passed; both supplied CLI scenarios passed validator checks.

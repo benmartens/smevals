@@ -1,0 +1,1 @@
+Warning: Ignoring unknown top-level key(s) in user settings file "C:\\Users\\bwmar\\.copilot\\settings.json": "sessionSync". They are not recognized user settings and have no effect.

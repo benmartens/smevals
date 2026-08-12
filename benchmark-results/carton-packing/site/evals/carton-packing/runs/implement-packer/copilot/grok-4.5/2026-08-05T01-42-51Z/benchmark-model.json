@@ -1,0 +1,6 @@
+{
+  "model": "grok-4.5",
+  "label": "Grok 4.5",
+  "effort": "high",
+  "maxAiCredits": 500
+}

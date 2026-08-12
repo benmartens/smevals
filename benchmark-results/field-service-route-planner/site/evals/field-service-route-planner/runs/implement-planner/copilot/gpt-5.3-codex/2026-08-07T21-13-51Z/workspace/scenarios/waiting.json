@@ -1,0 +1,31 @@
+{
+  "depot": "hub",
+  "travelTimes": {
+    "hub": {"hub": 0, "north": 8, "south": 14},
+    "north": {"hub": 9, "north": 0, "south": 7},
+    "south": {"hub": 11, "north": 6, "south": 0}
+  },
+  "technicians": [
+    {"id": "tech-a", "skills": ["inspect"], "shiftStart": 0, "shiftEnd": 150}
+  ],
+  "jobs": [
+    {
+      "id": "early",
+      "location": "north",
+      "requiredSkills": ["inspect"],
+      "duration": 15,
+      "windowStart": 0,
+      "windowEnd": 60,
+      "value": 10
+    },
+    {
+      "id": "later",
+      "location": "south",
+      "requiredSkills": ["inspect"],
+      "duration": 20,
+      "windowStart": 70,
+      "windowEnd": 120,
+      "value": 18
+    }
+  ]
+}

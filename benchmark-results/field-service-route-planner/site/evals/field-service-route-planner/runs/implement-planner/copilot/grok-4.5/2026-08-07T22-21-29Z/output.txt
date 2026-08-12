@@ -1,0 +1,11 @@
+**Done.** `RoutePlanner.Plan` is implemented; all **8/8** visible tests passed. CLI validated `basic.json` and `waiting.json`.
+
+### Algorithm
+Hybrid deterministic solver in `RoutePlanner.cs`:
+1. **Multi-start greedy insertion** — several job orderings (value, window, tightness, location, density) plus sequential NN build  
+2. **Local search** — relocate, swap, 2-opt, cross-exchange (max value, then min travel)  
+3. **Exact DFS** (≤12 jobs) — insert/skip each job into every feasible tech/position with value pruning  
+4. Output: one route per technician, ordinal ID order; lexicographic tie-break on job sequences
+
+### Constraints
+Skills, windows (wait allowed), shift return, directed asymmetric travel, single assignment, deterministic.

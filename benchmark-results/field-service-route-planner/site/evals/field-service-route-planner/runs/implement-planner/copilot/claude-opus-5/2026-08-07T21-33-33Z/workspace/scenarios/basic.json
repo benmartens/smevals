@@ -1,0 +1,21 @@
+{
+  "depot": "depot",
+  "travelTimes": {
+    "depot": {"depot": 0, "site-a": 10},
+    "site-a": {"depot": 12, "site-a": 0}
+  },
+  "technicians": [
+    {"id": "tech-a", "skills": ["repair"], "shiftStart": 0, "shiftEnd": 120}
+  ],
+  "jobs": [
+    {
+      "id": "job-1",
+      "location": "site-a",
+      "requiredSkills": ["repair"],
+      "duration": 20,
+      "windowStart": 15,
+      "windowEnd": 80,
+      "value": 25
+    }
+  ]
+}

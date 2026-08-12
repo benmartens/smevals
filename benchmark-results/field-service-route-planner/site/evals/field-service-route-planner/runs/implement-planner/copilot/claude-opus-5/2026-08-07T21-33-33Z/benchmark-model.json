@@ -1,0 +1,6 @@
+{
+  "model": "claude-opus-5",
+  "label": "Claude Opus 5.0",
+  "effort": "max",
+  "maxAiCredits": 500
+}

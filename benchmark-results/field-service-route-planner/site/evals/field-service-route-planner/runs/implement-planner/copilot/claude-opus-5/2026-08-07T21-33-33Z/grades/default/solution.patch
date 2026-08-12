@@ -1,0 +1,1779 @@
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/basic.json" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/basic.json"
+new file mode 100644
+index 0000000..95e1d0b
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/basic.json"
+@@ -0,0 +1,10 @@
++{
++  "routes": [
++    {
++      "technicianId": "tech-a",
++      "jobIds": [
++        "job-1"
++      ]
++    }
++  ]
++}
+\ No newline at end of file
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/waiting.json" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/waiting.json"
+new file mode 100644
+index 0000000..fa98608
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/out/waiting.json"
+@@ -0,0 +1,11 @@
++{
++  "routes": [
++    {
++      "technicianId": "tech-a",
++      "jobIds": [
++        "early",
++        "later"
++      ]
++    }
++  ]
++}
+\ No newline at end of file
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningModel.cs" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningModel.cs"
+new file mode 100644
+index 0000000..ad0982b
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningModel.cs"
+@@ -0,0 +1,306 @@
++namespace FieldServiceRoutePlanner;
++
++/// <summary>
++/// Normalized, index based view of a planning problem. Only technicians and
++/// jobs that the validator accepts are kept, technicians are ordered by ID and
++/// jobs are ordered by ID so planning is fully deterministic.
++/// </summary>
++internal sealed class PlanningModel
++{
++    public const int Inf = int.MaxValue / 4;
++
++    public string[] TechnicianIds = [];
++    public int[] ShiftStart = [];
++    public int[] ShiftEnd = [];
++
++    public string[] JobIds = [];
++    public int[] JobLocation = [];
++    public int[] Duration = [];
++    public int[] WindowStart = [];
++    public int[] WindowEnd = [];
++    public int[] Value = [];
++
++    /// <summary>Directed travel minutes; index 0 is the depot.</summary>
++    public int[][] Travel = [];
++
++    /// <summary>Shortest directed travel minutes, used for valid pruning bounds.</summary>
++    public int[][] Shortest = [];
++
++    public bool[][] Eligible = [];
++    public int[][] EligibleJobs = [];
++
++    public int TechnicianCount => TechnicianIds.Length;
++
++    public int JobCount => JobIds.Length;
++
++    public int DepotLoop => Travel.Length == 0 ? 0 : Travel[0][0];
++
++    public static PlanningModel Build(RoutePlanningProblem problem)
++    {
++        var technicians = CollectTechnicians(problem);
++        var jobs = CollectJobs(problem);
++        var locations = BuildLocationIndex(problem.Depot ?? string.Empty, jobs);
++        var travel = BuildTravelMatrix(problem, locations);
++        var shortest = BuildShortestPaths(travel);
++
++        var jobLocation = new int[jobs.Count];
++        for (var i = 0; i < jobs.Count; i++)
++        {
++            jobLocation[i] = locations[jobs[i].Location];
++        }
++
++        var keep = new List<int>(jobs.Count);
++        var eligibility = new bool[technicians.Count][];
++        for (var tech = 0; tech < technicians.Count; tech++)
++        {
++            eligibility[tech] = new bool[jobs.Count];
++        }
++
++        for (var job = 0; job < jobs.Count; job++)
++        {
++            var reachable = false;
++            for (var tech = 0; tech < technicians.Count; tech++)
++            {
++                var ok = IsEligible(
++                    technicians[tech],
++                    jobs[job],
++                    shortest,
++                    jobLocation[job]);
++                eligibility[tech][job] = ok;
++                reachable |= ok;
++            }
++
++            if (reachable)
++            {
++                keep.Add(job);
++            }
++        }
++
++        var model = new PlanningModel
++        {
++            TechnicianIds = technicians.Select(technician => technician.Id).ToArray(),
++            ShiftStart = technicians.Select(technician => technician.ShiftStart).ToArray(),
++            ShiftEnd = technicians.Select(technician => technician.ShiftEnd).ToArray(),
++            JobIds = keep.Select(index => jobs[index].Id).ToArray(),
++            JobLocation = keep.Select(index => jobLocation[index]).ToArray(),
++            Duration = keep.Select(index => jobs[index].Duration).ToArray(),
++            WindowStart = keep.Select(index => jobs[index].WindowStart).ToArray(),
++            WindowEnd = keep.Select(index => jobs[index].WindowEnd).ToArray(),
++            Value = keep.Select(index => jobs[index].Value).ToArray(),
++            Travel = travel,
++            Shortest = shortest,
++        };
++
++        model.Eligible = new bool[technicians.Count][];
++        model.EligibleJobs = new int[technicians.Count][];
++        for (var tech = 0; tech < technicians.Count; tech++)
++        {
++            var flags = new bool[keep.Count];
++            var eligibleJobs = new List<int>(keep.Count);
++            for (var index = 0; index < keep.Count; index++)
++            {
++                flags[index] = eligibility[tech][keep[index]];
++                if (flags[index])
++                {
++                    eligibleJobs.Add(index);
++                }
++            }
++
++            model.Eligible[tech] = flags;
++            model.EligibleJobs[tech] = eligibleJobs.ToArray();
++        }
++
++        return model;
++    }
++
++    private static bool IsEligible(
++        Technician technician,
++        ServiceJob job,
++        int[][] shortest,
++        int location)
++    {
++        var skills = new HashSet<string>(
++            technician.Skills ?? [],
++            StringComparer.Ordinal);
++        foreach (var skill in job.RequiredSkills ?? [])
++        {
++            if (!skills.Contains(skill))
++            {
++                return false;
++            }
++        }
++
++        // Shortest path bounds stay valid even when travel breaks the
++        // triangle inequality, so a rejected job truly cannot be served.
++        var outbound = shortest[0][location];
++        var inbound = shortest[location][0];
++        if (outbound >= Inf || inbound >= Inf)
++        {
++            return false;
++        }
++
++        var serviceStart = Math.Max(technician.ShiftStart + outbound, job.WindowStart);
++        var serviceEnd = serviceStart + job.Duration;
++        return serviceEnd <= job.WindowEnd
++            && serviceEnd + inbound <= technician.ShiftEnd;
++    }
++
++    private static int[][] BuildShortestPaths(int[][] travel)
++    {
++        var count = travel.Length;
++        var shortest = new int[count][];
++        for (var from = 0; from < count; from++)
++        {
++            shortest[from] = (int[])travel[from].Clone();
++            shortest[from][from] = Math.Min(shortest[from][from], 0);
++        }
++
++        for (var via = 0; via < count; via++)
++        {
++            for (var from = 0; from < count; from++)
++            {
++                var first = shortest[from][via];
++                if (first >= Inf)
++                {
++                    continue;
++                }
++
++                for (var to = 0; to < count; to++)
++                {
++                    var second = shortest[via][to];
++                    if (second < Inf && first + second < shortest[from][to])
++                    {
++                        shortest[from][to] = first + second;
++                    }
++                }
++            }
++        }
++
++        return shortest;
++    }
++
++    private static List<Technician> CollectTechnicians(RoutePlanningProblem problem)
++    {
++        var seen = new HashSet<string>(StringComparer.Ordinal);
++        var technicians = new List<Technician>();
++        foreach (var technician in problem.Technicians ?? [])
++        {
++            if (technician is null)
++            {
++                continue;
++            }
++
++            var skills = technician.Skills ?? [];
++            if (string.IsNullOrWhiteSpace(technician.Id)
++                || technician.ShiftStart < 0
++                || technician.ShiftEnd < technician.ShiftStart
++                || skills.Any(string.IsNullOrWhiteSpace)
++                || skills.Distinct(StringComparer.Ordinal).Count() != skills.Count
++                || !seen.Add(technician.Id))
++            {
++                continue;
++            }
++
++            technicians.Add(technician);
++        }
++
++        technicians.Sort(
++            (left, right) => string.CompareOrdinal(left.Id, right.Id));
++        return technicians;
++    }
++
++    private static List<ServiceJob> CollectJobs(RoutePlanningProblem problem)
++    {
++        var seen = new HashSet<string>(StringComparer.Ordinal);
++        var jobs = new List<ServiceJob>();
++        foreach (var job in problem.Jobs ?? [])
++        {
++            if (job is null)
++            {
++                continue;
++            }
++
++            var required = job.RequiredSkills ?? [];
++            if (string.IsNullOrWhiteSpace(job.Id)
++                || string.IsNullOrWhiteSpace(job.Location)
++                || job.Duration < 0
++                || job.WindowStart < 0
++                || job.WindowEnd < job.WindowStart
++                || job.Value < 0
++                || required.Any(string.IsNullOrWhiteSpace)
++                || required.Distinct(StringComparer.Ordinal).Count() != required.Count
++                || !seen.Add(job.Id))
++            {
++                continue;
++            }
++
++            jobs.Add(job);
++        }
++
++        jobs.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
++        return jobs;
++    }
++
++    private static Dictionary<string, int> BuildLocationIndex(
++        string depot,
++        List<ServiceJob> jobs)
++    {
++        var locations = new Dictionary<string, int>(StringComparer.Ordinal)
++        {
++            [depot] = 0,
++        };
++        foreach (var job in jobs)
++        {
++            if (!locations.ContainsKey(job.Location))
++            {
++                locations[job.Location] = locations.Count;
++            }
++        }
++
++        return locations;
++    }
++
++    private static int[][] BuildTravelMatrix(
++        RoutePlanningProblem problem,
++        Dictionary<string, int> locations)
++    {
++        var count = locations.Count;
++        var travel = new int[count][];
++        for (var from = 0; from < count; from++)
++        {
++            travel[from] = new int[count];
++            Array.Fill(travel[from], Inf);
++        }
++
++        foreach (var row in problem.TravelTimes ?? [])
++        {
++            if (row.Key is null
++                || !locations.TryGetValue(row.Key, out var from)
++                || row.Value is null)
++            {
++                continue;
++            }
++
++            foreach (var cell in row.Value)
++            {
++                if (cell.Key is not null
++                    && locations.TryGetValue(cell.Key, out var to)
++                    && cell.Value >= 0
++                    && cell.Value < Inf)
++                {
++                    travel[from][to] = cell.Value;
++                }
++            }
++        }
++
++        for (var index = 0; index < count; index++)
++        {
++            if (travel[index][index] >= Inf)
++            {
++                travel[index][index] = 0;
++            }
++        }
++
++        return travel;
++    }
++}
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningSolver.cs" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningSolver.cs"
+new file mode 100644
+index 0000000..f49c903
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/PlanningSolver.cs"
+@@ -0,0 +1,798 @@
++using System.Diagnostics.CodeAnalysis;
++using System.Numerics;
++
++namespace FieldServiceRoutePlanner;
++
++/// <summary>
++/// Produces a deterministic plan that lexicographically maximizes served value
++/// and then minimizes total directed travel. Small instances are solved exactly
++/// (per technician label DP plus a set partition DP); larger instances use a
++/// deterministic greedy construction with local search.
++/// </summary>
++internal sealed class PlanningSolver
++{
++    private const int Inf = PlanningModel.Inf;
++    private const int ExactJobLimit = 16;
++    private const int SingleTechnicianJobLimit = 18;
++    private const double ExactWorkLimit = 3.0e8;
++    private const int ReorderJobLimit = 13;
++
++    private readonly PlanningModel _model;
++
++    public PlanningSolver(PlanningModel model) => _model = model;
++
++    public List<int>[] Solve()
++    {
++        var routes = CreateEmpty();
++        if (_model.TechnicianCount == 0 || _model.JobCount == 0)
++        {
++            return routes;
++        }
++
++        var heuristic = BuildHeuristic();
++        if (TrySolveExactly(out var exact) && Compare(exact, heuristic) < 0)
++        {
++            return exact;
++        }
++
++        return heuristic;
++    }
++
++    private List<int>[] CreateEmpty()
++    {
++        var routes = new List<int>[_model.TechnicianCount];
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            routes[tech] = [];
++        }
++
++        return routes;
++    }
++
++    private static List<int>[] Copy(List<int>[] routes)
++    {
++        var copy = new List<int>[routes.Length];
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            copy[tech] = [.. routes[tech]];
++        }
++
++        return copy;
++    }
++
++    private static void Adopt(List<int>[] target, List<int>[] source)
++    {
++        for (var tech = 0; tech < target.Length; tech++)
++        {
++            target[tech].Clear();
++            target[tech].AddRange(source[tech]);
++        }
++    }
++
++    /// <summary>Simulates a route and reports its directed travel minutes.</summary>
++    private bool TryRoute(int technician, List<int> sequence, out int travelMinutes)
++    {
++        travelMinutes = 0;
++        var location = 0;
++        var time = _model.ShiftStart[technician];
++        var total = 0;
++
++        foreach (var job in sequence)
++        {
++            if (!_model.Eligible[technician][job])
++            {
++                return false;
++            }
++
++            var target = _model.JobLocation[job];
++            var minutes = _model.Travel[location][target];
++            if (minutes >= Inf)
++            {
++                return false;
++            }
++
++            total += minutes;
++            var start = Math.Max(time + minutes, _model.WindowStart[job]);
++            var end = start + _model.Duration[job];
++            if (end > _model.WindowEnd[job])
++            {
++                return false;
++            }
++
++            location = target;
++            time = end;
++        }
++
++        var back = _model.Travel[location][0];
++        if (back >= Inf)
++        {
++            return false;
++        }
++
++        total += back;
++        if (time + back > _model.ShiftEnd[technician])
++        {
++            return false;
++        }
++
++        travelMinutes = total;
++        return true;
++    }
++
++    private (int Value, int Travel) Score(List<int>[] routes)
++    {
++        var value = 0;
++        var travel = 0;
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            foreach (var job in routes[tech])
++            {
++                value += _model.Value[job];
++            }
++
++            travel += TryRoute(tech, routes[tech], out var minutes) ? minutes : Inf;
++        }
++
++        return (value, travel);
++    }
++
++    /// <summary>Orders plans by value descending, travel ascending, then content.</summary>
++    private int Compare(List<int>[] left, List<int>[] right)
++    {
++        var leftScore = Score(left);
++        var rightScore = Score(right);
++        if (leftScore.Value != rightScore.Value)
++        {
++            return rightScore.Value - leftScore.Value;
++        }
++
++        if (leftScore.Travel != rightScore.Travel)
++        {
++            return leftScore.Travel - rightScore.Travel;
++        }
++
++        for (var tech = 0; tech < left.Length; tech++)
++        {
++            var shared = Math.Min(left[tech].Count, right[tech].Count);
++            for (var index = 0; index < shared; index++)
++            {
++                if (left[tech][index] != right[tech][index])
++                {
++                    return left[tech][index] - right[tech][index];
++                }
++            }
++
++            if (left[tech].Count != right[tech].Count)
++            {
++                return left[tech].Count - right[tech].Count;
++            }
++        }
++
++        return 0;
++    }
++
++    private bool TrySolveExactly([NotNullWhen(true)] out List<int>[]? plan)
++    {
++        plan = null;
++        var jobCount = _model.JobCount;
++        var technicianCount = _model.TechnicianCount;
++        var limit = technicianCount == 1 ? SingleTechnicianJobLimit : ExactJobLimit;
++        if (jobCount > limit)
++        {
++            return false;
++        }
++
++        if (technicianCount > 1)
++        {
++            var work = 0.0;
++            for (var tech = 0; tech < technicianCount; tech++)
++            {
++                var eligible = _model.EligibleJobs[tech].Length;
++                work += Math.Pow(3.0, eligible) * Math.Pow(2.0, jobCount - eligible);
++                if (work > ExactWorkLimit)
++                {
++                    return false;
++                }
++            }
++        }
++
++        var solvers = new RouteLabelDp[technicianCount];
++        for (var tech = 0; tech < technicianCount; tech++)
++        {
++            solvers[tech] = new RouteLabelDp(
++                _model,
++                tech,
++                _model.EligibleJobs[tech]);
++            if (!solvers[tech].Run())
++            {
++                return false;
++            }
++        }
++
++        var routes = technicianCount == 1
++            ? SolveSingle(solvers[0])
++            : SolvePartition(solvers);
++        if (routes is null)
++        {
++            return false;
++        }
++
++        for (var tech = 0; tech < technicianCount; tech++)
++        {
++            if (!TryRoute(tech, routes[tech], out _))
++            {
++                return false;
++            }
++        }
++
++        plan = routes;
++        return true;
++    }
++
++    private List<int>[]? SolveSingle(RouteLabelDp solver)
++    {
++        var jobs = _model.EligibleJobs[0];
++        var size = 1 << jobs.Length;
++        var bestMask = 0;
++        var bestValue = -1;
++        var bestTravel = Inf;
++
++        for (var mask = 0; mask < size; mask++)
++        {
++            var travel = solver.BestTravel[mask];
++            if (travel >= Inf)
++            {
++                continue;
++            }
++
++            var value = 0;
++            for (var bit = mask; bit != 0; bit &= bit - 1)
++            {
++                value += _model.Value[jobs[BitOperations.TrailingZeroCount(bit)]];
++            }
++
++            if (value > bestValue || (value == bestValue && travel < bestTravel))
++            {
++                bestValue = value;
++                bestTravel = travel;
++                bestMask = mask;
++            }
++        }
++
++        if (bestValue < 0)
++        {
++            return null;
++        }
++
++        var routes = CreateEmpty();
++        routes[0] = solver.Reconstruct(bestMask);
++        return routes;
++    }
++
++    private List<int>[]? SolvePartition(RouteLabelDp[] solvers)
++    {
++        var jobCount = _model.JobCount;
++        var technicianCount = _model.TechnicianCount;
++        var full = 1 << jobCount;
++
++        var values = new int[full];
++        for (var mask = 1; mask < full; mask++)
++        {
++            var low = mask & -mask;
++            values[mask] = values[mask ^ low]
++                + _model.Value[BitOperations.TrailingZeroCount(low)];
++        }
++
++        var costs = new int[technicianCount][];
++        var eligibleMasks = new int[technicianCount];
++        var localIndex = new int[technicianCount][];
++        for (var tech = 0; tech < technicianCount; tech++)
++        {
++            var jobs = _model.EligibleJobs[tech];
++            var cost = new int[full];
++            Array.Fill(cost, Inf);
++
++            var mapping = new int[jobCount];
++            Array.Fill(mapping, -1);
++            var eligibleMask = 0;
++            for (var index = 0; index < jobs.Length; index++)
++            {
++                eligibleMask |= 1 << jobs[index];
++                mapping[jobs[index]] = index;
++            }
++
++            var localSize = 1 << jobs.Length;
++            var globalMask = new int[localSize];
++            for (var mask = 1; mask < localSize; mask++)
++            {
++                var low = mask & -mask;
++                globalMask[mask] = globalMask[mask ^ low]
++                    | (1 << jobs[BitOperations.TrailingZeroCount(low)]);
++            }
++
++            for (var mask = 0; mask < localSize; mask++)
++            {
++                var travel = solvers[tech].BestTravel[mask];
++                if (travel < cost[globalMask[mask]])
++                {
++                    cost[globalMask[mask]] = travel;
++                }
++            }
++
++            costs[tech] = cost;
++            eligibleMasks[tech] = eligibleMask;
++            localIndex[tech] = mapping;
++        }
++
++        var best = new int[full];
++        Array.Fill(best, Inf);
++        best[0] = 0;
++        var choices = new int[technicianCount][];
++
++        for (var tech = 0; tech < technicianCount; tech++)
++        {
++            var next = new int[full];
++            Array.Fill(next, Inf);
++            var choice = new int[full];
++            var cost = costs[tech];
++            var eligibleMask = eligibleMasks[tech];
++
++            for (var mask = 0; mask < full; mask++)
++            {
++                var candidates = mask & eligibleMask;
++                var bestTotal = Inf;
++                var bestSubset = 0;
++                var subset = candidates;
++                while (true)
++                {
++                    var routeCost = cost[subset];
++                    if (routeCost < Inf)
++                    {
++                        var previous = best[mask ^ subset];
++                        if (previous < Inf && previous + routeCost < bestTotal)
++                        {
++                            bestTotal = previous + routeCost;
++                            bestSubset = subset;
++                        }
++                    }
++
++                    if (subset == 0)
++                    {
++                        break;
++                    }
++
++                    subset = (subset - 1) & candidates;
++                }
++
++                next[mask] = bestTotal;
++                choice[mask] = bestSubset;
++            }
++
++            best = next;
++            choices[tech] = choice;
++        }
++
++        var chosenMask = -1;
++        var chosenValue = -1;
++        var chosenTravel = Inf;
++        for (var mask = 0; mask < full; mask++)
++        {
++            if (best[mask] >= Inf)
++            {
++                continue;
++            }
++
++            if (values[mask] > chosenValue
++                || (values[mask] == chosenValue && best[mask] < chosenTravel))
++            {
++                chosenValue = values[mask];
++                chosenTravel = best[mask];
++                chosenMask = mask;
++            }
++        }
++
++        if (chosenMask < 0)
++        {
++            return null;
++        }
++
++        var routes = CreateEmpty();
++        var remaining = chosenMask;
++        for (var tech = technicianCount - 1; tech >= 0; tech--)
++        {
++            var subset = choices[tech][remaining];
++            remaining ^= subset;
++
++            var localMask = 0;
++            for (var bit = subset; bit != 0; bit &= bit - 1)
++            {
++                var job = BitOperations.TrailingZeroCount(bit);
++                localMask |= 1 << localIndex[tech][job];
++            }
++
++            routes[tech] = solvers[tech].Reconstruct(localMask);
++        }
++
++        return routes;
++    }
++
++    private List<int>[] BuildHeuristic()
++    {
++        List<int>[]? best = null;
++        for (var mode = 0; mode < 3; mode++)
++        {
++            var candidate = Construct(mode);
++            Improve(candidate);
++            if (best is null || Compare(candidate, best) < 0)
++            {
++                best = candidate;
++            }
++        }
++
++        ReorderRoutes(best!);
++        return best!;
++    }
++
++    private List<int>[] Construct(int mode)
++    {
++        var routes = CreateEmpty();
++        while (InsertBest(routes, mode))
++        {
++        }
++
++        return routes;
++    }
++
++    private bool[] ServedFlags(List<int>[] routes)
++    {
++        var served = new bool[_model.JobCount];
++        foreach (var route in routes)
++        {
++            foreach (var job in route)
++            {
++                served[job] = true;
++            }
++        }
++
++        return served;
++    }
++
++    /// <summary>Inserts the single most attractive unserved job, if any fits.</summary>
++    private bool InsertBest(List<int>[] routes, int mode)
++    {
++        var served = ServedFlags(routes);
++        var travels = new int[routes.Length];
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            travels[tech] = TryRoute(tech, routes[tech], out var minutes)
++                ? minutes
++                : Inf;
++        }
++
++        long bestPrimary = long.MinValue;
++        var bestValue = -1;
++        var bestDelta = 0;
++        var bestJob = -1;
++        var bestTech = -1;
++        var bestPosition = -1;
++
++        for (var job = 0; job < _model.JobCount; job++)
++        {
++            if (served[job])
++            {
++                continue;
++            }
++
++            for (var tech = 0; tech < routes.Length; tech++)
++            {
++                if (!_model.Eligible[tech][job] || travels[tech] >= Inf)
++                {
++                    continue;
++                }
++
++                var route = routes[tech];
++                for (var position = 0; position <= route.Count; position++)
++                {
++                    route.Insert(position, job);
++                    var feasible = TryRoute(tech, route, out var minutes);
++                    route.RemoveAt(position);
++                    if (!feasible)
++                    {
++                        continue;
++                    }
++
++                    var value = _model.Value[job];
++                    var delta = minutes - travels[tech];
++                    var primary = mode switch
++                    {
++                        0 => value,
++                        1 => value - delta,
++                        _ => (long)value * 1000 / Math.Max(1, delta + 1),
++                    };
++
++                    if (primary > bestPrimary
++                        || (primary == bestPrimary
++                            && (value > bestValue
++                                || (value == bestValue && delta < bestDelta))))
++                    {
++                        bestPrimary = primary;
++                        bestValue = value;
++                        bestDelta = delta;
++                        bestJob = job;
++                        bestTech = tech;
++                        bestPosition = position;
++                    }
++                }
++            }
++        }
++
++        if (bestJob < 0)
++        {
++            return false;
++        }
++
++        routes[bestTech].Insert(bestPosition, bestJob);
++        return true;
++    }
++
++    private void Improve(List<int>[] routes)
++    {
++        for (var round = 0; round < 64; round++)
++        {
++            var changed = false;
++            while (InsertBest(routes, 0))
++            {
++                changed = true;
++            }
++
++            changed |= ReorderRoutes(routes);
++            changed |= Relocate(routes);
++            changed |= Swap(routes);
++            changed |= EjectAndRefill(routes);
++            if (!changed)
++            {
++                return;
++            }
++        }
++    }
++
++    /// <summary>Re-sequences each route optimally for its assigned job set.</summary>
++    private bool ReorderRoutes(List<int>[] routes)
++    {
++        var improved = false;
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            var route = routes[tech];
++            if (route.Count < 2 || route.Count > ReorderJobLimit)
++            {
++                continue;
++            }
++
++            if (!TryRoute(tech, route, out var current))
++            {
++                continue;
++            }
++
++            var jobs = route.ToArray();
++            Array.Sort(jobs);
++            var solver = new RouteLabelDp(_model, tech, jobs, 400_000);
++            if (!solver.Run())
++            {
++                continue;
++            }
++
++            var full = (1 << jobs.Length) - 1;
++            if (solver.BestTravel[full] < current)
++            {
++                var order = solver.Reconstruct(full);
++                route.Clear();
++                route.AddRange(order);
++                improved = true;
++            }
++        }
++
++        return improved;
++    }
++
++    private bool Relocate(List<int>[] routes)
++    {
++        var travels = new int[routes.Length];
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            travels[tech] = TryRoute(tech, routes[tech], out var minutes)
++                ? minutes
++                : Inf;
++        }
++
++        var bestGain = 0;
++        var bestSource = -1;
++        var bestPosition = -1;
++        var bestTarget = -1;
++        var bestSlot = -1;
++
++        for (var source = 0; source < routes.Length; source++)
++        {
++            if (travels[source] >= Inf)
++            {
++                continue;
++            }
++
++            for (var position = 0; position < routes[source].Count; position++)
++            {
++                var job = routes[source][position];
++                routes[source].RemoveAt(position);
++                if (!TryRoute(source, routes[source], out var trimmed))
++                {
++                    routes[source].Insert(position, job);
++                    continue;
++                }
++
++                for (var target = 0; target < routes.Length; target++)
++                {
++                    if (!_model.Eligible[target][job]
++                        || (target != source && travels[target] >= Inf))
++                    {
++                        continue;
++                    }
++
++                    for (var slot = 0; slot <= routes[target].Count; slot++)
++                    {
++                        routes[target].Insert(slot, job);
++                        var feasible = TryRoute(target, routes[target], out var minutes);
++                        routes[target].RemoveAt(slot);
++                        if (!feasible)
++                        {
++                            continue;
++                        }
++
++                        var gain = target == source
++                            ? travels[source] - minutes
++                            : travels[source] - trimmed + travels[target] - minutes;
++                        if (gain > bestGain)
++                        {
++                            bestGain = gain;
++                            bestSource = source;
++                            bestPosition = position;
++                            bestTarget = target;
++                            bestSlot = slot;
++                        }
++                    }
++                }
++
++                routes[source].Insert(position, job);
++            }
++        }
++
++        if (bestSource < 0)
++        {
++            return false;
++        }
++
++        var moved = routes[bestSource][bestPosition];
++        routes[bestSource].RemoveAt(bestPosition);
++        routes[bestTarget].Insert(bestSlot, moved);
++        return true;
++    }
++
++    private bool Swap(List<int>[] routes)
++    {
++        var travels = new int[routes.Length];
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            travels[tech] = TryRoute(tech, routes[tech], out var minutes)
++                ? minutes
++                : Inf;
++        }
++
++        var bestGain = 0;
++        var bestLeft = -1;
++        var bestLeftPos = -1;
++        var bestRight = -1;
++        var bestRightPos = -1;
++
++        for (var left = 0; left < routes.Length; left++)
++        {
++            if (travels[left] >= Inf)
++            {
++                continue;
++            }
++
++            for (var leftPos = 0; leftPos < routes[left].Count; leftPos++)
++            {
++                for (var right = left; right < routes.Length; right++)
++                {
++                    if (travels[right] >= Inf)
++                    {
++                        continue;
++                    }
++
++                    var start = right == left ? leftPos + 1 : 0;
++                    for (var rightPos = start; rightPos < routes[right].Count; rightPos++)
++                    {
++                        var first = routes[left][leftPos];
++                        var second = routes[right][rightPos];
++                        if (!_model.Eligible[left][second]
++                            || !_model.Eligible[right][first])
++                        {
++                            continue;
++                        }
++
++                        routes[left][leftPos] = second;
++                        routes[right][rightPos] = first;
++                        var feasible = TryRoute(left, routes[left], out var leftMinutes);
++                        var gain = 0;
++                        if (feasible)
++                        {
++                            if (right == left)
++                            {
++                                gain = travels[left] - leftMinutes;
++                            }
++                            else if (TryRoute(right, routes[right], out var rightMinutes))
++                            {
++                                gain = travels[left] - leftMinutes
++                                    + travels[right] - rightMinutes;
++                            }
++                            else
++                            {
++                                feasible = false;
++                            }
++                        }
++
++                        routes[left][leftPos] = first;
++                        routes[right][rightPos] = second;
++                        if (feasible && gain > bestGain)
++                        {
++                            bestGain = gain;
++                            bestLeft = left;
++                            bestLeftPos = leftPos;
++                            bestRight = right;
++                            bestRightPos = rightPos;
++                        }
++                    }
++                }
++            }
++        }
++
++        if (bestLeft < 0)
++        {
++            return false;
++        }
++
++        (routes[bestLeft][bestLeftPos], routes[bestRight][bestRightPos]) =
++            (routes[bestRight][bestRightPos], routes[bestLeft][bestLeftPos]);
++        return true;
++    }
++
++    /// <summary>Drops one served job and refills, escaping low value traps.</summary>
++    private bool EjectAndRefill(List<int>[] routes)
++    {
++        if (_model.JobCount > 160)
++        {
++            return false;
++        }
++
++        var current = Score(routes);
++        for (var tech = 0; tech < routes.Length; tech++)
++        {
++            for (var position = 0; position < routes[tech].Count; position++)
++            {
++                var candidate = Copy(routes);
++                candidate[tech].RemoveAt(position);
++                while (InsertBest(candidate, 0))
++                {
++                }
++
++                ReorderRoutes(candidate);
++                var score = Score(candidate);
++                if (score.Value > current.Value
++                    || (score.Value == current.Value && score.Travel < current.Travel))
++                {
++                    Adopt(routes, candidate);
++                    return true;
++                }
++            }
++        }
++
++        return false;
++    }
++}
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/RouteLabelDp.cs" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/RouteLabelDp.cs"
+new file mode 100644
+index 0000000..e7bda8e
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/RouteLabelDp.cs"
+@@ -0,0 +1,236 @@
++namespace FieldServiceRoutePlanner;
++
++/// <summary>
++/// Exact single-technician sequencing over a fixed candidate job set.
++/// Labels are (mask, last job) states carrying Pareto optimal
++/// (service end time, accumulated travel) pairs, so waiting, asymmetric
++/// travel and time windows are all handled without heuristics.
++/// </summary>
++internal sealed class RouteLabelDp
++{
++    private const int Inf = PlanningModel.Inf;
++
++    private readonly PlanningModel _model;
++    private readonly int _technician;
++    private readonly int[] _jobs;
++    private readonly int _size;
++    private readonly int[] _head;
++    private readonly int _budget;
++
++    private int[] _time;
++    private int[] _travel;
++    private int[] _parent;
++    private int[] _next;
++    private int[] _last;
++    private bool[] _dead;
++    private int _count;
++    private bool _overflow;
++
++    public RouteLabelDp(
++        PlanningModel model,
++        int technician,
++        int[] jobs,
++        int labelBudget = 2_000_000)
++    {
++        _model = model;
++        _technician = technician;
++        _jobs = jobs;
++        _size = 1 << jobs.Length;
++        _budget = labelBudget;
++        _head = new int[_size * jobs.Length];
++        Array.Fill(_head, -1);
++
++        var capacity = Math.Min(Math.Max(1024, _size), labelBudget);
++        _time = new int[capacity];
++        _travel = new int[capacity];
++        _parent = new int[capacity];
++        _next = new int[capacity];
++        _last = new int[capacity];
++        _dead = new bool[capacity];
++
++        BestTravel = new int[_size];
++        BestLabel = new int[_size];
++        Array.Fill(BestTravel, Inf);
++        Array.Fill(BestLabel, -1);
++        BestTravel[0] = model.Travel[0][0];
++    }
++
++    /// <summary>Minimum travel, return leg included, to serve exactly a mask.</summary>
++    public int[] BestTravel { get; }
++
++    private int[] BestLabel { get; }
++
++    public bool Run()
++    {
++        var jobCount = _jobs.Length;
++        var shiftStart = _model.ShiftStart[_technician];
++        var shiftEnd = _model.ShiftEnd[_technician];
++        var travel = _model.Travel;
++
++        for (var job = 0; job < jobCount; job++)
++        {
++            var global = _jobs[job];
++            var location = _model.JobLocation[global];
++            var minutes = travel[0][location];
++            if (minutes >= Inf)
++            {
++                continue;
++            }
++
++            var start = Math.Max(shiftStart + minutes, _model.WindowStart[global]);
++            var end = start + _model.Duration[global];
++            if (end > _model.WindowEnd[global]
++                || end + _model.Shortest[location][0] > shiftEnd)
++            {
++                continue;
++            }
++
++            Add(1 << job, job, end, minutes, -1);
++        }
++
++        for (var mask = 1; mask < _size && !_overflow; mask++)
++        {
++            for (var last = 0; last < jobCount; last++)
++            {
++                if ((mask & (1 << last)) == 0)
++                {
++                    continue;
++                }
++
++                var fromLocation = _model.JobLocation[_jobs[last]];
++                for (var label = _head[(mask * jobCount) + last];
++                    label >= 0;
++                    label = _next[label])
++                {
++                    if (_dead[label])
++                    {
++                        continue;
++                    }
++
++                    var time = _time[label];
++                    var used = _travel[label];
++                    for (var job = 0; job < jobCount; job++)
++                    {
++                        if ((mask & (1 << job)) != 0)
++                        {
++                            continue;
++                        }
++
++                        var global = _jobs[job];
++                        var location = _model.JobLocation[global];
++                        var minutes = travel[fromLocation][location];
++                        if (minutes >= Inf)
++                        {
++                            continue;
++                        }
++
++                        var start = Math.Max(
++                            time + minutes,
++                            _model.WindowStart[global]);
++                        var end = start + _model.Duration[global];
++                        if (end > _model.WindowEnd[global]
++                            || end + _model.Shortest[location][0] > shiftEnd)
++                        {
++                            continue;
++                        }
++
++                        Add(mask | (1 << job), job, end, used + minutes, label);
++                        if (_overflow)
++                        {
++                            return false;
++                        }
++                    }
++                }
++            }
++        }
++
++        return !_overflow;
++    }
++
++    /// <summary>Minimum travel ordering for a mask, in operational order.</summary>
++    public List<int> Reconstruct(int mask)
++    {
++        var order = new List<int>();
++        for (var label = BestLabel[mask]; label >= 0; label = _parent[label])
++        {
++            order.Add(_jobs[_last[label]]);
++        }
++
++        order.Reverse();
++        return order;
++    }
++
++    private void Add(int mask, int last, int time, int travelUsed, int parent)
++    {
++        var slot = (mask * _jobs.Length) + last;
++        for (var label = _head[slot]; label >= 0; label = _next[label])
++        {
++            if (!_dead[label]
++                && _time[label] <= time
++                && _travel[label] <= travelUsed)
++            {
++                return;
++            }
++        }
++
++        if (_count == _time.Length && !Grow())
++        {
++            _overflow = true;
++            return;
++        }
++
++        var id = _count++;
++        _time[id] = time;
++        _travel[id] = travelUsed;
++        _parent[id] = parent;
++        _last[id] = last;
++        _dead[id] = false;
++        _next[id] = _head[slot];
++        _head[slot] = id;
++
++        for (var label = _next[id]; label >= 0; label = _next[label])
++        {
++            if (!_dead[label]
++                && time <= _time[label]
++                && travelUsed <= _travel[label])
++            {
++                _dead[label] = true;
++            }
++        }
++
++        var back = _model.Travel[_model.JobLocation[_jobs[last]]][0];
++        if (back >= Inf || time + back > _model.ShiftEnd[_technician])
++        {
++            return;
++        }
++
++        var total = travelUsed + back;
++        if (total < BestTravel[mask])
++        {
++            BestTravel[mask] = total;
++            BestLabel[mask] = id;
++        }
++    }
++
++    private bool Grow()
++    {
++        if (_count >= _budget)
++        {
++            return false;
++        }
++
++        var capacity = Math.Min(Math.Max(_count * 2, 1024), _budget);
++        if (capacity <= _count)
++        {
++            return false;
++        }
++
++        Array.Resize(ref _time, capacity);
++        Array.Resize(ref _travel, capacity);
++        Array.Resize(ref _parent, capacity);
++        Array.Resize(ref _next, capacity);
++        Array.Resize(ref _last, capacity);
++        Array.Resize(ref _dead, capacity);
++        return true;
++    }
++}
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\fixtures\\starter/src/FieldServiceRoutePlanner/RoutePlanner.cs" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/RoutePlanner.cs"
+index 8ea465c..d43d4da 100644
+--- "a/C:\\github\\smevals\\examples\\field-service-route-planner\\fixtures\\starter/src/FieldServiceRoutePlanner/RoutePlanner.cs"
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/src/FieldServiceRoutePlanner/RoutePlanner.cs"
+@@ -6,9 +6,21 @@ public sealed class RoutePlanner
+     {
+         ArgumentNullException.ThrowIfNull(problem);
+ 
+-        // TODO: Implement a deterministic assignment and sequencing strategy
+-        // that lexicographically maximizes served value and then minimizes
+-        // travel while satisfying every rule in README.md.
+-        return RoutePlan.Empty;
++        var model = PlanningModel.Build(problem);
++        var assignment = new PlanningSolver(model).Solve();
++
++        var routes = new List<TechnicianRoute>(model.TechnicianCount);
++        for (var tech = 0; tech < model.TechnicianCount; tech++)
++        {
++            var jobIds = new List<string>(assignment[tech].Count);
++            foreach (var job in assignment[tech])
++            {
++                jobIds.Add(model.JobIds[job]);
++            }
++
++            routes.Add(new TechnicianRoute(model.TechnicianIds[tech], jobIds));
++        }
++
++        return routes.Count == 0 ? RoutePlan.Empty : new RoutePlan(routes);
+     }
+ }
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/Program.cs" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/Program.cs"
+new file mode 100644
+index 0000000..dcea6a7
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/Program.cs"
+@@ -0,0 +1,329 @@
++ï»¿using System.Diagnostics;
++using FieldServiceRoutePlanner;
++
++// Temporary stress harness: compares RoutePlanner against brute force.
++var failures = 0;
++var checkedCases = 0;
++var planner = new RoutePlanner();
++
++for (var seed = 1; seed <= 400; seed++)
++{
++    var random = new Random(seed);
++    var techCount = random.Next(1, 4);
++    var jobCount = random.Next(1, 9);
++    var problem = Generate(random, techCount, jobCount);
++
++    var plan = planner.Plan(problem);
++    var report = RouteValidator.Validate(problem, plan);
++    if (!report.IsValid)
++    {
++        Console.WriteLine($"seed {seed}: INVALID {string.Join("; ", report.Issues.Select(i => i.Code))}");
++        failures++;
++        continue;
++    }
++
++    var second = planner.Plan(problem);
++    if (!plan.Routes.Zip(second.Routes).All(pair =>
++        pair.First.TechnicianId == pair.Second.TechnicianId
++        && pair.First.JobIds.SequenceEqual(pair.Second.JobIds, StringComparer.Ordinal)))
++    {
++        Console.WriteLine($"seed {seed}: NONDETERMINISTIC");
++        failures++;
++        continue;
++    }
++
++    var (bestValue, bestTravel) = BruteForce(problem);
++    checkedCases++;
++    if (report.ServedValue != bestValue || report.TotalTravel != bestTravel)
++    {
++        Console.WriteLine(
++            $"seed {seed}: got ({report.ServedValue},{report.TotalTravel}) "
++            + $"want ({bestValue},{bestTravel}) techs={techCount} jobs={jobCount}");
++        failures++;
++    }
++}
++
++Console.WriteLine($"small cases compared: {checkedCases}, failures: {failures}");
++
++var worst = 0L;
++for (var seed = 1000; seed <= 1030; seed++)
++{
++    var random = new Random(seed);
++    var techCount = random.Next(2, 6);
++    var jobCount = random.Next(12, 30);
++    var problem = Generate(random, techCount, jobCount);
++    var watch = Stopwatch.StartNew();
++    var plan = planner.Plan(problem);
++    watch.Stop();
++    worst = Math.Max(worst, watch.ElapsedMilliseconds);
++    var report = RouteValidator.Validate(problem, plan);
++    if (!report.IsValid)
++    {
++        Console.WriteLine($"large seed {seed}: INVALID {string.Join("; ", report.Issues.Select(i => i.Code))}");
++        failures++;
++    }
++}
++
++Console.WriteLine($"large worst elapsed: {worst} ms, total failures: {failures}");
++
++// Edge cases.
++var empty = new RoutePlanningProblem(
++    "depot",
++    new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal)
++    {
++        ["depot"] = new(StringComparer.Ordinal) { ["depot"] = 0 },
++    },
++    [new Technician("b", [], 0, 10), new Technician("a", ["x"], 0, 10)],
++    []);
++var emptyPlan = planner.Plan(empty);
++var emptyReport = RouteValidator.Validate(empty, emptyPlan);
++if (!emptyReport.IsValid || emptyPlan.Routes.Count != 2)
++{
++    Console.WriteLine("edge: empty jobs failed");
++    failures++;
++}
++
++var noTechs = new RoutePlanningProblem(
++    "depot",
++    new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal)
++    {
++        ["depot"] = new(StringComparer.Ordinal) { ["depot"] = 0, ["a"] = 3 },
++        ["a"] = new(StringComparer.Ordinal) { ["depot"] = 3, ["a"] = 0 },
++    },
++    [],
++    [new ServiceJob("j", "a", ["x"], 5, 0, 50, 9)]);
++if (!RouteValidator.Validate(noTechs, planner.Plan(noTechs)).IsValid)
++{
++    Console.WriteLine("edge: no technicians failed");
++    failures++;
++}
++
++// Non metric shortcut: depot -> far is slow, but depot -> near -> far is fast.
++var shortcut = new RoutePlanningProblem(
++    "depot",
++    new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal)
++    {
++        ["depot"] = new(StringComparer.Ordinal) { ["depot"] = 0, ["near"] = 5, ["far"] = 90 },
++        ["near"] = new(StringComparer.Ordinal) { ["depot"] = 5, ["near"] = 0, ["far"] = 5 },
++        ["far"] = new(StringComparer.Ordinal) { ["depot"] = 90, ["near"] = 5, ["far"] = 0 },
++    },
++    [new Technician("t", ["x"], 0, 60)],
++    [
++        new ServiceJob("near", "near", ["x"], 5, 0, 60, 1),
++        new ServiceJob("far", "far", ["x"], 5, 0, 60, 50),
++    ]);
++var shortcutReport = RouteValidator.Validate(shortcut, planner.Plan(shortcut));
++if (!shortcutReport.IsValid || shortcutReport.ServedValue != 1)
++{
++    Console.WriteLine($"edge: shortcut served {shortcutReport.ServedValue}, want 1");
++    failures++;
++}
++
++Console.WriteLine($"total failures: {failures}");
++return failures == 0 ? 0 : 1;
++
++static RoutePlanningProblem Generate(Random random, int techCount, int jobCount)
++{
++    var skillPool = new[] { "repair", "install", "inspect" };
++    var locations = new List<string> { "depot" };
++    var locationCount = random.Next(1, jobCount + 1);
++    for (var i = 0; i < locationCount; i++)
++    {
++        locations.Add($"loc-{i}");
++    }
++
++    var travel = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
++    foreach (var from in locations)
++    {
++        var row = new Dictionary<string, int>(StringComparer.Ordinal);
++        foreach (var to in locations)
++        {
++            row[to] = from == to ? 0 : random.Next(1, 30);
++        }
++
++        travel[from] = row;
++    }
++
++    var technicians = new List<Technician>();
++    for (var i = 0; i < techCount; i++)
++    {
++        var skills = skillPool.Where(_ => random.Next(2) == 0).ToList();
++        if (skills.Count == 0)
++        {
++            skills.Add(skillPool[random.Next(skillPool.Length)]);
++        }
++
++        var start = random.Next(0, 20);
++        technicians.Add(new Technician($"tech-{i}", skills, start, start + random.Next(60, 200)));
++    }
++
++    var jobs = new List<ServiceJob>();
++    for (var i = 0; i < jobCount; i++)
++    {
++        var required = skillPool.Where(_ => random.Next(3) == 0).ToList();
++        var windowStart = random.Next(0, 120);
++        var duration = random.Next(0, 30);
++        var windowEnd = windowStart + duration + random.Next(0, 80);
++        jobs.Add(new ServiceJob(
++            $"job-{i:00}",
++            locations[random.Next(1, locations.Count)],
++            required,
++            duration,
++            windowStart,
++            windowEnd,
++            random.Next(0, 30)));
++    }
++
++    return new RoutePlanningProblem("depot", travel, technicians, jobs);
++}
++
++static (int Value, int Travel) BruteForce(RoutePlanningProblem problem)
++{
++    var techs = problem.Technicians.OrderBy(t => t.Id, StringComparer.Ordinal).ToArray();
++    var jobs = problem.Jobs.ToArray();
++    var cache = new Dictionary<(int Tech, int Mask), int>();
++
++    int RouteCost(int tech, int mask)
++    {
++        if (cache.TryGetValue((tech, mask), out var cached))
++        {
++            return cached;
++        }
++
++        var members = new List<int>();
++        for (var i = 0; i < jobs.Length; i++)
++        {
++            if ((mask & (1 << i)) != 0)
++            {
++                members.Add(i);
++            }
++        }
++
++        var best = int.MaxValue;
++        if (members.Count == 0)
++        {
++            best = problem.TravelTimes["depot"]["depot"];
++        }
++        else
++        {
++            foreach (var order in Permutations(members))
++            {
++                var location = "depot";
++                var time = techs[tech].ShiftStart;
++                var travel = 0;
++                var ok = true;
++                foreach (var index in order)
++                {
++                    var job = jobs[index];
++                    if (!RouteValidator.HasSkills(techs[tech], job))
++                    {
++                        ok = false;
++                        break;
++                    }
++
++                    var minutes = problem.TravelTimes[location][job.Location];
++                    travel += minutes;
++                    var start = Math.Max(time + minutes, job.WindowStart);
++                    var end = start + job.Duration;
++                    if (end > job.WindowEnd)
++                    {
++                        ok = false;
++                        break;
++                    }
++
++                    location = job.Location;
++                    time = end;
++                }
++
++                if (!ok)
++                {
++                    continue;
++                }
++
++                travel += problem.TravelTimes[location]["depot"];
++                time += problem.TravelTimes[location]["depot"];
++                if (time <= techs[tech].ShiftEnd && travel < best)
++                {
++                    best = travel;
++                }
++            }
++        }
++
++        cache[(tech, mask)] = best;
++        return best;
++    }
++
++    var bestValue = -1;
++    var bestTravel = int.MaxValue;
++    var masks = new int[techs.Length];
++
++    void Recurse(int job)
++    {
++        if (job == jobs.Length)
++        {
++            var travel = 0;
++            for (var tech = 0; tech < techs.Length; tech++)
++            {
++                var cost = RouteCost(tech, masks[tech]);
++                if (cost == int.MaxValue)
++                {
++                    return;
++                }
++
++                travel += cost;
++            }
++
++            var value = 0;
++            for (var tech = 0; tech < techs.Length; tech++)
++            {
++                for (var i = 0; i < jobs.Length; i++)
++                {
++                    if ((masks[tech] & (1 << i)) != 0)
++                    {
++                        value += jobs[i].Value;
++                    }
++                }
++            }
++
++            if (value > bestValue || (value == bestValue && travel < bestTravel))
++            {
++                bestValue = value;
++                bestTravel = travel;
++            }
++
++            return;
++        }
++
++        Recurse(job + 1);
++        for (var tech = 0; tech < techs.Length; tech++)
++        {
++            masks[tech] |= 1 << job;
++            Recurse(job + 1);
++            masks[tech] &= ~(1 << job);
++        }
++    }
++
++    Recurse(0);
++    return (bestValue, bestTravel);
++}
++
++static IEnumerable<List<int>> Permutations(List<int> items)
++{
++    if (items.Count <= 1)
++    {
++        yield return items;
++        yield break;
++    }
++
++    for (var i = 0; i < items.Count; i++)
++    {
++        var rest = new List<int>(items);
++        rest.RemoveAt(i);
++        foreach (var tail in Permutations(rest))
++        {
++            var result = new List<int> { items[i] };
++            result.AddRange(tail);
++            yield return result;
++        }
++    }
++}
+diff --git "a/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/tmp-stress.csproj" "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/tmp-stress.csproj"
+new file mode 100644
+index 0000000..8d7845b
+--- /dev/null
++++ "b/C:\\github\\smevals\\examples\\field-service-route-planner\\runs\\implement-planner\\copilot\\claude-opus-5\\2026-08-07T21-33-33Z\\workspace/tmp-stress/tmp-stress.csproj"
+@@ -0,0 +1,15 @@
++ï»¿<Project Sdk="Microsoft.NET.Sdk">
++
++  <ItemGroup>
++    <ProjectReference Include="..\src\FieldServiceRoutePlanner\FieldServiceRoutePlanner.csproj" />
++  </ItemGroup>
++
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <TargetFramework>net10.0</TargetFramework>
++    <RootNamespace>tmp_stress</RootNamespace>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <Nullable>enable</Nullable>
++  </PropertyGroup>
++
++</Project>

@@ -1,0 +1,138 @@
+{
+  "score": 0.0,
+  "metrics": {
+    "build_ok": true,
+    "valid_plan_rate": 0.0,
+    "average_cost_ratio": 0.0,
+    "deterministic": true,
+    "hidden_cases_valid": 0,
+    "hidden_cases_total": 7,
+    "runtime_ms": 4076
+  },
+  "tags": [
+    "deterministic",
+    "issue_missing_plan"
+  ],
+  "notes": "7 case(s) invalid",
+  "per_case_details": [
+    {
+      "case_id": "selective_index",
+      "weight": 0.25,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 2981,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 333,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "join_order_trap",
+      "weight": 2.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 2059725,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 174,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "memory_spill",
+      "weight": 2.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 16995,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 167,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "star_schema",
+      "weight": 3.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 1157497991,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 170,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "chain_eight",
+      "weight": 3.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 549370232,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 172,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "snowflake_ten",
+      "weight": 4.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 5022698,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 168,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    },
+    {
+      "case_id": "dense_twelve",
+      "weight": 4.0,
+      "valid": false,
+      "score": 0.0,
+      "cost_ratio": 0.0,
+      "candidate_cost": null,
+      "reference_cost": 14267999,
+      "issues": [
+        {
+          "code": "missing_plan",
+          "detail": "result.plan must be an object"
+        }
+      ],
+      "runtime_ms": 167,
+      "cli_stderr": "missing_plan: The result must contain a plan."
+    }
+  ]
+}

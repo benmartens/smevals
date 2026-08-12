@@ -1,0 +1,4 @@
+Summary:
+- Implemented a deterministic greedy 3D packing algorithm in CartonPacker.Pack.
+- Strategy: scan z,x,y origins, at each spot evaluate feasible carton orientations, pick the best by value/weight ratio, then value, then volume, with deterministic tiebreakers. Respects rotations, upright constraint, weight limit, non-overlap, and full-support rules. Returns placements sorted as required.
+- Ran visible tests: all 9/9 passed.

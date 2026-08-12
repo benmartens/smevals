@@ -1,0 +1,24 @@
+task:
+  name: implement-planner
+  copilot_workspace: fixtures/starter
+  prompt: Implement RoutePlanner.Plan in the provided dependency-free .NET 10 solution.
+    Read README.md carefully and preserve the public JSON/CLI contract. Return deterministic
+    routes that satisfy technician skills, service time windows, shifts, and travel
+    times. Lexicographically maximize served job value and then minimize total travel.
+    You may modify source files in the workspace, but do not add external packages
+    or network dependencies. Run `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests`
+    until the visible tests pass, and use the supplied validator while developing.
+    When finished, respond with a concise summary of the algorithm and tests run.
+config:
+  name: copilot
+  runner: C:\Users\benmar\AppData\Local\Python\pythoncore-3.14-64\Scripts\smevals-copilot.exe
+  model: grok-4.5
+  copilot:
+    permissions: workspace
+    allow_tools:
+    - shell(dotnet:*)
+    effort: high
+    max_ai_credits: 500
+started: '2026-08-07T22:21:29.729233+00:00'
+duration_seconds: 339.24
+exit_code: 0

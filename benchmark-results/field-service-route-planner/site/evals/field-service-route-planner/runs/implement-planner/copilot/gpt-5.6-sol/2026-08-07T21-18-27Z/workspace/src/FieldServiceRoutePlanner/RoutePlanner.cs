@@ -1,0 +1,405 @@
+using System.Numerics;
+
+namespace FieldServiceRoutePlanner;
+
+public sealed class RoutePlanner
+{
+    public RoutePlan Plan(RoutePlanningProblem problem)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+
+        var technicians = problem.Technicians
+            .OrderBy(technician => technician.Id, StringComparer.Ordinal)
+            .ToArray();
+        var jobs = problem.Jobs
+            .OrderBy(job => job.Id, StringComparer.Ordinal)
+            .ToArray();
+
+        EnsureUniqueIds(
+            technicians.Select(technician => technician.Id),
+            "technician");
+        EnsureUniqueIds(jobs.Select(job => job.Id), "job");
+
+        var jobBits = Enumerable.Range(0, jobs.Length)
+            .Select(index => BigInteger.One << index)
+            .ToArray();
+        var depotToDepot = GetTravel(problem, problem.Depot, problem.Depot);
+        var depotToJob = new long[jobs.Length];
+        var jobToDepot = new long[jobs.Length];
+        var jobToJob = new long[jobs.Length, jobs.Length];
+
+        for (var from = 0; from < jobs.Length; from++)
+        {
+            depotToJob[from] = GetTravel(
+                problem,
+                problem.Depot,
+                jobs[from].Location);
+            jobToDepot[from] = GetTravel(
+                problem,
+                jobs[from].Location,
+                problem.Depot);
+
+            for (var to = 0; to < jobs.Length; to++)
+            {
+                jobToJob[from, to] = GetTravel(
+                    problem,
+                    jobs[from].Location,
+                    jobs[to].Location);
+            }
+        }
+
+        var optionsByTechnician = technicians
+            .Select(technician => BuildRouteOptions(
+                technician,
+                jobs,
+                jobBits,
+                depotToDepot,
+                depotToJob,
+                jobToDepot,
+                jobToJob))
+            .ToArray();
+
+        var states = new Dictionary<BigInteger, AssignmentState>
+        {
+            [BigInteger.Zero] = new(
+                BigInteger.Zero,
+                Value: 0,
+                Travel: 0,
+                Previous: null,
+                Route: null),
+        };
+
+        foreach (var routeOptions in optionsByTechnician)
+        {
+            var nextStates = new Dictionary<BigInteger, AssignmentState>();
+
+            foreach (var stateEntry in states.OrderBy(entry => entry.Key))
+            {
+                var state = stateEntry.Value;
+                foreach (var route in routeOptions)
+                {
+                    if ((state.Mask & route.Mask) != BigInteger.Zero)
+                    {
+                        continue;
+                    }
+
+                    var mask = state.Mask | route.Mask;
+                    var travel = state.Travel + route.Travel;
+                    if (nextStates.TryGetValue(mask, out var existing)
+                        && existing.Travel <= travel)
+                    {
+                        continue;
+                    }
+
+                    nextStates[mask] = new(
+                        mask,
+                        state.Value + route.Value,
+                        travel,
+                        state,
+                        route);
+                }
+            }
+
+            states = nextStates;
+        }
+
+        if (states.Count == 0)
+        {
+            return CanonicalEmptyPlan(technicians);
+        }
+
+        AssignmentState? best = null;
+        foreach (var state in states.Values.OrderBy(state => state.Mask))
+        {
+            if (best is null
+                || state.Value > best.Value
+                || (state.Value == best.Value && state.Travel < best.Travel))
+            {
+                best = state;
+            }
+        }
+
+        var selectedRoutes = new RouteOption[technicians.Length];
+        var cursor = best!;
+        for (var technicianIndex = technicians.Length - 1;
+             technicianIndex >= 0;
+             technicianIndex--)
+        {
+            selectedRoutes[technicianIndex] = cursor.Route!;
+            cursor = cursor.Previous!;
+        }
+
+        var routes = new List<TechnicianRoute>(technicians.Length);
+        for (var technicianIndex = 0;
+             technicianIndex < technicians.Length;
+             technicianIndex++)
+        {
+            routes.Add(new(
+                technicians[technicianIndex].Id,
+                selectedRoutes[technicianIndex].Sequence
+                    .Select(jobIndex => jobs[jobIndex].Id)
+                    .ToList()));
+        }
+
+        return new(routes);
+    }
+
+    private static List<RouteOption> BuildRouteOptions(
+        Technician technician,
+        ServiceJob[] jobs,
+        BigInteger[] jobBits,
+        long depotToDepot,
+        long[] depotToJob,
+        long[] jobToDepot,
+        long[,] jobToJob)
+    {
+        var skills = new HashSet<string>(
+            technician.Skills,
+            StringComparer.Ordinal);
+        var eligibleJobs = Enumerable.Range(0, jobs.Length)
+            .Where(index => jobs[index].RequiredSkills.All(skills.Contains))
+            .ToArray();
+        var bestRoutes = new Dictionary<BigInteger, RouteOption>();
+        var currentStates = new Dictionary<RouteState, List<RouteLabel>>
+        {
+            [new(BigInteger.Zero, LastJob: -1)] =
+            [
+                new(
+                    technician.ShiftStart,
+                    Travel: 0,
+                    Value: 0,
+                    Sequence: []),
+            ],
+        };
+
+        while (currentStates.Count > 0)
+        {
+            foreach (var stateEntry in currentStates
+                         .OrderBy(entry => entry.Key.Mask)
+                         .ThenBy(entry => entry.Key.LastJob))
+            {
+                var state = stateEntry.Key;
+                stateEntry.Value.Sort(CompareLabels);
+
+                foreach (var label in stateEntry.Value)
+                {
+                    var returnTravel = state.LastJob < 0
+                        ? depotToDepot
+                        : jobToDepot[state.LastJob];
+                    if (label.Time + returnTravel <= technician.ShiftEnd)
+                    {
+                        AddRouteOption(
+                            bestRoutes,
+                            new(
+                                state.Mask,
+                                label.Value,
+                                label.Travel + returnTravel,
+                                label.Sequence));
+                    }
+                }
+            }
+
+            var nextStates = new Dictionary<RouteState, List<RouteLabel>>();
+            foreach (var stateEntry in currentStates
+                         .OrderBy(entry => entry.Key.Mask)
+                         .ThenBy(entry => entry.Key.LastJob))
+            {
+                var state = stateEntry.Key;
+                foreach (var label in stateEntry.Value)
+                {
+                    foreach (var jobIndex in eligibleJobs)
+                    {
+                        if ((state.Mask & jobBits[jobIndex])
+                            != BigInteger.Zero)
+                        {
+                            continue;
+                        }
+
+                        var travel = state.LastJob < 0
+                            ? depotToJob[jobIndex]
+                            : jobToJob[state.LastJob, jobIndex];
+                        var arrival = label.Time + travel;
+                        var serviceStart = Math.Max(
+                            arrival,
+                            jobs[jobIndex].WindowStart);
+                        var serviceEnd = serviceStart + jobs[jobIndex].Duration;
+                        if (serviceEnd > jobs[jobIndex].WindowEnd
+                            || serviceEnd > technician.ShiftEnd)
+                        {
+                            continue;
+                        }
+
+                        var sequence = new int[label.Sequence.Length + 1];
+                        label.Sequence.CopyTo(sequence, 0);
+                        sequence[^1] = jobIndex;
+
+                        var nextState = new RouteState(
+                            state.Mask | jobBits[jobIndex],
+                            jobIndex);
+                        if (!nextStates.TryGetValue(
+                                nextState,
+                                out var labels))
+                        {
+                            labels = [];
+                            nextStates.Add(nextState, labels);
+                        }
+
+                        AddParetoLabel(
+                            labels,
+                            new(
+                                serviceEnd,
+                                label.Travel + travel,
+                                label.Value + jobs[jobIndex].Value,
+                                sequence));
+                    }
+                }
+            }
+
+            currentStates = nextStates;
+        }
+
+        return bestRoutes.Values
+            .OrderBy(route => route.Mask)
+            .ToList();
+    }
+
+    private static void AddParetoLabel(
+        List<RouteLabel> labels,
+        RouteLabel candidate)
+    {
+        for (var index = labels.Count - 1; index >= 0; index--)
+        {
+            var existing = labels[index];
+            var existingDominates = existing.Time <= candidate.Time
+                && existing.Travel <= candidate.Travel;
+            if (existingDominates)
+            {
+                var strictlyDominates = existing.Time < candidate.Time
+                    || existing.Travel < candidate.Travel;
+                if (strictlyDominates
+                    || CompareSequences(
+                        existing.Sequence,
+                        candidate.Sequence) <= 0)
+                {
+                    return;
+                }
+            }
+
+            var candidateDominates = candidate.Time <= existing.Time
+                && candidate.Travel <= existing.Travel;
+            if (candidateDominates)
+            {
+                labels.RemoveAt(index);
+            }
+        }
+
+        labels.Add(candidate);
+    }
+
+    private static void AddRouteOption(
+        Dictionary<BigInteger, RouteOption> routes,
+        RouteOption candidate)
+    {
+        if (!routes.TryGetValue(candidate.Mask, out var existing)
+            || candidate.Travel < existing.Travel
+            || (candidate.Travel == existing.Travel
+                && CompareSequences(
+                    candidate.Sequence,
+                    existing.Sequence) < 0))
+        {
+            routes[candidate.Mask] = candidate;
+        }
+    }
+
+    private static int CompareLabels(RouteLabel left, RouteLabel right)
+    {
+        var comparison = left.Time.CompareTo(right.Time);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Travel.CompareTo(right.Travel);
+        return comparison != 0
+            ? comparison
+            : CompareSequences(left.Sequence, right.Sequence);
+    }
+
+    private static int CompareSequences(
+        IReadOnlyList<int> left,
+        IReadOnlyList<int> right)
+    {
+        var commonLength = Math.Min(left.Count, right.Count);
+        for (var index = 0; index < commonLength; index++)
+        {
+            var comparison = left[index].CompareTo(right[index]);
+            if (comparison != 0)
+            {
+                return comparison;
+            }
+        }
+
+        return left.Count.CompareTo(right.Count);
+    }
+
+    private static void EnsureUniqueIds(
+        IEnumerable<string> ids,
+        string entityName)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var id in ids)
+        {
+            if (!seen.Add(id))
+            {
+                throw new ArgumentException(
+                    $"Duplicate {entityName} ID '{id}'.");
+            }
+        }
+    }
+
+    private static long GetTravel(
+        RoutePlanningProblem problem,
+        string from,
+        string to)
+    {
+        if (!problem.TravelTimes.TryGetValue(from, out var row)
+            || !row.TryGetValue(to, out var travel)
+            || travel < 0)
+        {
+            throw new ArgumentException(
+                $"Missing or invalid travel time '{from}' -> '{to}'.",
+                nameof(problem));
+        }
+
+        return travel;
+    }
+
+    private static RoutePlan CanonicalEmptyPlan(
+        IReadOnlyList<Technician> technicians) =>
+        new(technicians
+            .Select(technician => new TechnicianRoute(technician.Id, []))
+            .ToList());
+
+    private readonly record struct RouteState(
+        BigInteger Mask,
+        int LastJob);
+
+    private sealed record RouteLabel(
+        long Time,
+        long Travel,
+        long Value,
+        int[] Sequence);
+
+    private sealed record RouteOption(
+        BigInteger Mask,
+        long Value,
+        long Travel,
+        int[] Sequence);
+
+    private sealed record AssignmentState(
+        BigInteger Mask,
+        long Value,
+        long Travel,
+        AssignmentState? Previous,
+        RouteOption? Route);
+}

@@ -1,0 +1,234 @@
+namespace FieldServiceRoutePlanner;
+
+public sealed class RoutePlanner
+{
+    public RoutePlan Plan(RoutePlanningProblem problem)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+        return new Solver(problem).Solve();
+    }
+
+    private sealed class Solver
+    {
+        private readonly RoutePlanningProblem _problem;
+        private readonly List<Technician> _techs;
+        private readonly List<ServiceJob> _jobs;
+        private readonly int _m, _n, _depotI;
+        private readonly int[] _jLoc;
+        private readonly int[,] _dist;
+        private readonly bool[,] _canDo;
+        private readonly int[] _sfx;
+
+        // Mutable search state
+        private readonly List<int>[] _assigned;
+        private int _bestVal;
+        private int _bestTrav;
+        private readonly List<int>[] _bestOrdering;
+
+        internal Solver(RoutePlanningProblem problem)
+        {
+            _problem = problem;
+            _techs = problem.Technicians
+                .OrderBy(t => t.Id, StringComparer.Ordinal)
+                .ToList();
+            // Sort by value descending for fast pruning; break ties by ID.
+            _jobs = problem.Jobs
+                .OrderByDescending(j => j.Value)
+                .ThenBy(j => j.Id, StringComparer.Ordinal)
+                .ToList();
+            _m = _techs.Count;
+            _n = _jobs.Count;
+
+            // Build compact location index
+            var locationList = _jobs.Select(j => j.Location)
+                .Append(problem.Depot)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(l => l, StringComparer.Ordinal)
+                .ToList();
+            var locIdx = locationList.ToDictionary(
+                l => l, l => locationList.IndexOf(l), StringComparer.Ordinal);
+            int L = locationList.Count;
+            _depotI = locIdx[problem.Depot];
+            _jLoc = _jobs.Select(j => locIdx[j.Location]).ToArray();
+
+            _dist = new int[L, L];
+            for (int i = 0; i < L; i++)
+                for (int j2 = 0; j2 < L; j2++)
+                    _dist[i, j2] = problem.TravelTimes[locationList[i]][locationList[j2]];
+
+            _canDo = new bool[_m, _n];
+            for (int t = 0; t < _m; t++)
+                for (int j2 = 0; j2 < _n; j2++)
+                    _canDo[t, j2] = RouteValidator.HasSkills(_techs[t], _jobs[j2]);
+
+            _sfx = new int[_n + 1];
+            for (int j2 = _n - 1; j2 >= 0; j2--)
+                _sfx[j2] = _sfx[j2 + 1] + _jobs[j2].Value;
+
+            _assigned = new List<int>[_m];
+            _bestOrdering = new List<int>[_m];
+            for (int t = 0; t < _m; t++)
+            {
+                _assigned[t] = new List<int>();
+                _bestOrdering[t] = [];
+            }
+            _bestVal = 0;
+            _bestTrav = 0; // empty plan: all techs return immediately (dist[depot,depot]=0)
+        }
+
+        internal RoutePlan Solve()
+        {
+            if (_n == 0)
+                return new RoutePlan(_techs.Select(t => new TechnicianRoute(t.Id, [])).ToList());
+
+            Dfs(0, 0);
+
+            return new RoutePlan(
+                _techs.Select((t, i) =>
+                    new TechnicianRoute(t.Id, _bestOrdering[i].Select(ji => _jobs[ji].Id).ToList()))
+                .ToList());
+        }
+
+        private void Dfs(int ji, int curVal)
+        {
+            // Value upper bound pruning
+            if (curVal + _sfx[ji] < _bestVal) return;
+
+            if (ji == _n)
+            {
+                EvaluateLeaf(curVal);
+                return;
+            }
+
+            var job = _jobs[ji];
+
+            for (int t = 0; t < _m; t++)
+            {
+                if (!_canDo[t, ji]) continue;
+                // Quick feasibility: can the tech even reach this job before its window closes?
+                if (_techs[t].ShiftStart + _dist[_depotI, _jLoc[ji]] > job.WindowEnd) continue;
+
+                _assigned[t].Add(ji);
+                Dfs(ji + 1, curVal + job.Value);
+                _assigned[t].RemoveAt(_assigned[t].Count - 1);
+            }
+
+            // Skip this job
+            Dfs(ji + 1, curVal);
+        }
+
+        private void EvaluateLeaf(int curVal)
+        {
+            int totalTravel = 0;
+            var orderings = new List<int>[_m];
+
+            for (int t = 0; t < _m; t++)
+            {
+                if (!TryBestOrdering(t, _assigned[t], out int tTravel, out var ord))
+                    return; // infeasible assignment
+                totalTravel += tTravel;
+                orderings[t] = ord;
+            }
+
+            if (curVal > _bestVal || (curVal == _bestVal && totalTravel < _bestTrav))
+            {
+                _bestVal = curVal;
+                _bestTrav = totalTravel;
+                for (int t = 0; t < _m; t++) _bestOrdering[t] = orderings[t];
+            }
+        }
+
+        /// <summary>
+        /// For a given list of job indices assigned to technician <paramref name="t"/>,
+        /// find the feasible ordering with minimum travel. Uses exhaustive permutation
+        /// search up to <see cref="MaxExhaustive"/> jobs, greedy EDF otherwise.
+        /// </summary>
+        private const int MaxExhaustive = 9; // 9! = 362880
+
+        private bool TryBestOrdering(
+            int t,
+            List<int> jList,
+            out int bestTravel,
+            out List<int> bestOrder)
+        {
+            bestTravel = int.MaxValue;
+            bestOrder = null!;
+
+            if (jList.Count == 0)
+            {
+                bestTravel = 0;
+                bestOrder = [];
+                return true;
+            }
+
+            int k = jList.Count;
+
+            if (k <= MaxExhaustive)
+            {
+                int[] perm = jList.ToArray();
+                ExhaustivePermute(t, perm, 0, k, ref bestTravel, ref bestOrder);
+            }
+            else
+            {
+                // Greedy: sort by windowEnd (EDF) then windowStart, then ID
+                int[] perm = jList
+                    .OrderBy(ji => _jobs[ji].WindowEnd)
+                    .ThenBy(ji => _jobs[ji].WindowStart)
+                    .ThenBy(ji => _jobs[ji].Id, StringComparer.Ordinal)
+                    .ToArray();
+                EvalPerm(t, perm, k, ref bestTravel, ref bestOrder);
+            }
+
+            return bestOrder != null;
+        }
+
+        private void ExhaustivePermute(
+            int t, int[] perm, int start, int k,
+            ref int bestTravel, ref List<int> bestOrder)
+        {
+            if (start == k)
+            {
+                EvalPerm(t, perm, k, ref bestTravel, ref bestOrder);
+                return;
+            }
+            for (int i = start; i < k; i++)
+            {
+                (perm[start], perm[i]) = (perm[i], perm[start]);
+                ExhaustivePermute(t, perm, start + 1, k, ref bestTravel, ref bestOrder);
+                (perm[start], perm[i]) = (perm[i], perm[start]);
+            }
+        }
+
+        private void EvalPerm(
+            int t, int[] perm, int k,
+            ref int bestTravel, ref List<int> bestOrder)
+        {
+            int curLoc = _depotI;
+            int curTime = _techs[t].ShiftStart;
+            int curTravel = 0;
+
+            for (int pi = 0; pi < k; pi++)
+            {
+                int ji = perm[pi];
+                int tr = _dist[curLoc, _jLoc[ji]];
+                int arr = curTime + tr;
+                int svcStart = Math.Max(arr, _jobs[ji].WindowStart);
+                int svcEnd = svcStart + _jobs[ji].Duration;
+                if (svcEnd > _jobs[ji].WindowEnd) return; // infeasible permutation
+                curTravel += tr;
+                curLoc = _jLoc[ji];
+                curTime = svcEnd;
+            }
+
+            int retTr = _dist[curLoc, _depotI];
+            if (curTime + retTr > _techs[t].ShiftEnd) return;
+            int totalT = curTravel + retTr;
+
+            if (totalT < bestTravel)
+            {
+                bestTravel = totalT;
+                bestOrder = new List<int>(perm);
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+All 8/8 visible tests pass.
+
+## Algorithm Summary
+
+**Two-phase Branch-and-Bound:**
+
+1. **Phase 1 — Job assignment BnB**: Jobs are sorted by value descending (for early pruning). The DFS tries assigning each job to each skill-compatible technician or skipping it. A suffix-sum upper bound on remaining value prunes branches that can't beat the current best.
+
+2. **Phase 2 — Optimal ordering at leaves**: Once all jobs are assigned to technicians, each technician's route is optimized independently via exhaustive permutation search (up to 9! = 362,880 permutations), with a greedy EDF fallback for larger routes. This correctly handles cases where non-deadline-ordered sequences are required (e.g., job B must precede job A even if B has a later deadline).
+
+**Key design choices:**
+- Routes are output in lexicographic technician-ID order (required by validator)
+- All tie-breaking (job sort, permutation generation) is deterministic
+- Travel minimization is the secondary objective, evaluated only at BnB leaves where value is maximised
+
+**Tests run:** `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` — 8/8 passed (4 validator tests + 4 engine tests covering basic assignment, skill filtering, value maximisation over travel, and determinism).

@@ -1,0 +1,23 @@
+### Algorithm Summary
+
+1. **Dynamic Programming over Table Subsets**: The optimizer uses bottom-up DP (System R style) over table bitmasks ($1 \dots 2^N$) to construct optimal physical execution plans.
+2. **Access Path Selection (Popcount 1)**: Evaluates `tableScan` and all eligible `indexSeek` paths (where an index exists and query has an indexable predicate). Costs are computed matching `CostModel.EstimateFilteredRows` and leaf cost formulas.
+3. **Join Tree Enumeration (Popcount $2 \dots N$)**:
+   - Iterates non-empty submask partitions $(L, R)$ for connected table subsets.
+   - Guarantees canonical child ordering by anchoring the subset's minimum table ID in $L$ ($\text{minTableId}(L) < \text{minTableId}(R)$).
+   - Filters out non-crossing joins using precomputed adjacency bitmasks.
+   - Evaluates `nestedLoop`, `hashJoin`, and `mergeJoin` using exact saturating integer arithmetic matching `CostModel`.
+4. **Deterministic Tie-Breaking**: Breaks cost ties deterministically using peak memory, operator count, and a canonical structural node comparison (`CompareNodes`).
+
+### Tests Executed
+
+- `dotnet run --project visible-tests\QueryOptimizer.VisibleTests`
+  - PASS `scan and seek costs`
+  - PASS `invalid cross join`
+  - PASS `canonical child order`
+  - PASS `single table index choice`
+  - PASS `three table join order`
+  - PASS `memory-aware join choice`
+  - PASS `deterministic output`
+  - **Result**: 7/7 visible tests passed.
+- `dotnet build QueryOptimizer.sln`: 0 Warnings, 0 Errors.

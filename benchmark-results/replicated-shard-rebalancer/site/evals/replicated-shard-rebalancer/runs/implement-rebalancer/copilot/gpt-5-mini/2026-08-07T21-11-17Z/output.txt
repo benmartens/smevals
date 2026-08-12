@@ -1,0 +1,6 @@
+Summary:
+- Fixed duplicate CompareObjective by renaming the unused overload (CompareObjectiveLb) to avoid CS0128.
+- Implemented deterministic solver in ReplicatedShardRebalancer.Rebalance: greedy seed + exact DFS with branch-and-bound, precomputed combos respecting zone-diversity, optimistic lower bounds, lexicographic objective comparison, and canonical ordering.
+- Ran visible tests: all 9/9 passed (valid target metrics, duplicate/exclusion/zone/capacity/canonical/determinism checks).
+
+If you want, remove the unused CompareObjectiveLb overload or further optimize pruning for large inputs.

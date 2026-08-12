@@ -1,0 +1,23 @@
+task:
+  name: implement-packer
+  copilot_workspace: fixtures/starter
+  prompt: Implement CartonPacker.Pack in the provided .NET 10 solution. Read README.md
+    carefully and preserve the public JSON/CLI contract. The engine must produce deterministic,
+    valid 3D placements while maximizing shipment value and then packed volume. You
+    may modify source files in the workspace, but do not add external packages or
+    network dependencies. Run `dotnet run --project visible-tests\CartonPacking.VisibleTests`
+    until the visible tests pass, and use the supplied validator while developing.
+    When finished, respond with a concise summary of the algorithm and tests run.
+config:
+  name: copilot
+  runner: C:\git\smevals\.venv\Scripts\smevals-copilot.exe
+  model: claude-sonnet-4.6
+  copilot:
+    permissions: workspace
+    allow_tools:
+    - shell(dotnet:*)
+    effort: high
+    max_ai_credits: 500
+started: '2026-08-05T01:19:13.515526+00:00'
+duration_seconds: 124.61
+exit_code: 0

@@ -1,0 +1,522 @@
+namespace FieldServiceRoutePlanner;
+
+public sealed class RoutePlanner
+{
+        private const int UnreachableTravel = int.MaxValue / 4;
+
+        public RoutePlan Plan(RoutePlanningProblem problem)
+        {
+            ArgumentNullException.ThrowIfNull(problem);
+
+            var technicians = problem.Technicians
+                .OrderBy(technician => technician.Id, StringComparer.Ordinal)
+                .ToArray();
+            var jobs = problem.Jobs
+                .OrderBy(job => job.Id, StringComparer.Ordinal)
+                .ToArray();
+
+            if (jobs.Length > 63)
+            {
+                return BuildGreedyFallbackPlan(problem, technicians, jobs);
+            }
+
+            var jobCount = jobs.Length;
+            var depot = problem.Depot;
+            var travelDepotToDepot = GetTravel(problem.TravelTimes, depot, depot);
+            var travelDepotToJob = new int[jobCount];
+            var travelJobToDepot = new int[jobCount];
+            var travelJobToJob = new int[jobCount, jobCount];
+            var jobValues = new int[jobCount];
+
+            for (var i = 0; i < jobCount; i++)
+            {
+                var location = jobs[i].Location;
+                travelDepotToJob[i] = GetTravel(problem.TravelTimes, depot, location);
+                travelJobToDepot[i] = GetTravel(problem.TravelTimes, location, depot);
+                jobValues[i] = jobs[i].Value;
+            }
+
+            for (var i = 0; i < jobCount; i++)
+            {
+                for (var j = 0; j < jobCount; j++)
+                {
+                    travelJobToJob[i, j] = GetTravel(
+                        problem.TravelTimes,
+                        jobs[i].Location,
+                        jobs[j].Location);
+                }
+            }
+
+            var technicianOptions = new List<SortedDictionary<ulong, RouteOption>>(
+                technicians.Length);
+            foreach (var technician in technicians)
+            {
+                technicianOptions.Add(BuildRouteOptions(
+                    technician,
+                    jobs,
+                    jobValues,
+                    travelDepotToDepot,
+                    travelDepotToJob,
+                    travelJobToDepot,
+                    travelJobToJob));
+            }
+
+            var dp = new SortedDictionary<ulong, GlobalState>
+            {
+                [0] = new(0, 0, Array.Empty<ulong>())
+            };
+            for (var technicianIndex = 0; technicianIndex < technicians.Length;
+                technicianIndex++)
+            {
+                var next = new SortedDictionary<ulong, GlobalState>();
+                foreach (var stateEntry in dp)
+                {
+                    var assignedMask = stateEntry.Key;
+                    var state = stateEntry.Value;
+
+                    foreach (var optionEntry in technicianOptions[technicianIndex])
+                    {
+                        var optionMask = optionEntry.Key;
+                        if ((assignedMask & optionMask) != 0)
+                        {
+                            continue;
+                        }
+
+                        var option = optionEntry.Value;
+                        var newMask = assignedMask | optionMask;
+                        var candidate = new GlobalState(
+                            state.ServedValue + option.Value,
+                            state.TotalTravel + option.Travel,
+                            Append(state.ChosenMasks, optionMask));
+
+                        if (!next.TryGetValue(newMask, out var currentBest)
+                            || IsBetterGlobalState(candidate, currentBest))
+                        {
+                            next[newMask] = candidate;
+                        }
+                    }
+                }
+                dp = next;
+            }
+
+            GlobalState? bestState = null;
+            foreach (var state in dp.Values)
+            {
+                if (bestState is null || IsBetterGlobalState(state, bestState))
+                {
+                    bestState = state;
+                }
+            }
+
+            if (bestState is null)
+            {
+                return new RoutePlan(
+                    technicians.Select(technician =>
+                            new TechnicianRoute(technician.Id, []))
+                        .ToList());
+            }
+
+            var routes = new List<TechnicianRoute>(technicians.Length);
+            for (var technicianIndex = 0; technicianIndex < technicians.Length;
+                technicianIndex++)
+            {
+                var chosenMask = bestState.ChosenMasks[technicianIndex];
+                var option = technicianOptions[technicianIndex][chosenMask];
+                var jobIds = option.JobIndices
+                    .Select(jobIndex => jobs[jobIndex].Id)
+                    .ToList();
+                routes.Add(new TechnicianRoute(
+                    technicians[technicianIndex].Id,
+                    jobIds));
+            }
+
+            return new RoutePlan(routes);
+        }
+
+        private static RoutePlan BuildGreedyFallbackPlan(
+            RoutePlanningProblem problem,
+            Technician[] technicians,
+            ServiceJob[] jobs)
+        {
+            var remaining = new HashSet<string>(
+                jobs.Select(job => job.Id),
+                StringComparer.Ordinal);
+            var routes = new List<TechnicianRoute>(technicians.Length);
+
+            foreach (var technician in technicians)
+            {
+                var skills = new HashSet<string>(
+                    technician.Skills,
+                    StringComparer.Ordinal);
+                var jobIds = new List<string>();
+                var currentLocation = problem.Depot;
+                var currentTime = technician.ShiftStart;
+
+                while (true)
+                {
+                    ServiceJob? bestJob = null;
+                    var bestTravel = 0;
+                    var bestEnd = 0;
+                    foreach (var job in jobs.OrderByDescending(job => job.Value)
+                                 .ThenBy(job => job.Id, StringComparer.Ordinal))
+                    {
+                        if (!remaining.Contains(job.Id)
+                            || !job.RequiredSkills.All(skills.Contains))
+                        {
+                            continue;
+                        }
+
+                        var toJob = GetTravel(
+                            problem.TravelTimes,
+                            currentLocation,
+                            job.Location);
+                        var toDepot = GetTravel(
+                            problem.TravelTimes,
+                            job.Location,
+                            problem.Depot);
+                        if (toJob >= UnreachableTravel || toDepot >= UnreachableTravel)
+                        {
+                            continue;
+                        }
+
+                        var arrival = currentTime + toJob;
+                        var start = Math.Max(arrival, job.WindowStart);
+                        var end = start + job.Duration;
+                        if (end > job.WindowEnd
+                            || end + toDepot > technician.ShiftEnd)
+                        {
+                            continue;
+                        }
+
+                        if (bestJob is null
+                            || job.Value > bestJob.Value
+                            || (job.Value == bestJob.Value
+                                && (toJob < bestTravel
+                                    || (toJob == bestTravel
+                                        && (end < bestEnd
+                                            || (end == bestEnd
+                                                && string.CompareOrdinal(
+                                                    job.Id,
+                                                    bestJob.Id) < 0))))))
+                        {
+                            bestJob = job;
+                            bestTravel = toJob;
+                            bestEnd = end;
+                        }
+                    }
+
+                    if (bestJob is null)
+                    {
+                        break;
+                    }
+
+                    remaining.Remove(bestJob.Id);
+                    jobIds.Add(bestJob.Id);
+                    currentLocation = bestJob.Location;
+                    currentTime = bestEnd;
+                }
+
+                routes.Add(new TechnicianRoute(technician.Id, jobIds));
+            }
+
+            return new RoutePlan(routes);
+        }
+
+        private static SortedDictionary<ulong, RouteOption> BuildRouteOptions(
+            Technician technician,
+            ServiceJob[] jobs,
+            int[] jobValues,
+            int travelDepotToDepot,
+            int[] travelDepotToJob,
+            int[] travelJobToDepot,
+            int[,] travelJobToJob)
+        {
+            var options = new SortedDictionary<ulong, RouteOption>();
+            var skills = new HashSet<string>(technician.Skills, StringComparer.Ordinal);
+            var eligible = jobs.Select(job => job.RequiredSkills.All(skills.Contains))
+                .ToArray();
+
+            if (travelDepotToDepot < UnreachableTravel
+                && technician.ShiftStart + travelDepotToDepot <= technician.ShiftEnd)
+            {
+                options[0] = new(0, travelDepotToDepot, 0, []);
+            }
+
+            var labels = new List<Label>
+            {
+                new(0, -1, technician.ShiftStart, 0, -1, true)
+            };
+            var stateBuckets = new Dictionary<StateKey, List<int>>
+            {
+                [new(0, -1)] = [0]
+            };
+
+            for (var labelIndex = 0; labelIndex < labels.Count; labelIndex++)
+            {
+                var label = labels[labelIndex];
+                if (!label.Active)
+                {
+                    continue;
+                }
+
+                for (var jobIndex = 0; jobIndex < jobs.Length; jobIndex++)
+                {
+                    if (!eligible[jobIndex])
+                    {
+                        continue;
+                    }
+
+                    var bit = 1UL << jobIndex;
+                    if ((label.Mask & bit) != 0)
+                    {
+                        continue;
+                    }
+
+                    var legTravel = label.LastJobIndex < 0
+                        ? travelDepotToJob[jobIndex]
+                        : travelJobToJob[label.LastJobIndex, jobIndex];
+                    if (legTravel >= UnreachableTravel)
+                    {
+                        continue;
+                    }
+
+                    var arrival = label.Time + legTravel;
+                    var serviceStart = Math.Max(arrival, jobs[jobIndex].WindowStart);
+                    var serviceEnd = serviceStart + jobs[jobIndex].Duration;
+                    if (serviceEnd > jobs[jobIndex].WindowEnd)
+                    {
+                        continue;
+                    }
+
+                    var returnTravel = travelJobToDepot[jobIndex];
+                    if (returnTravel >= UnreachableTravel
+                        || serviceEnd + returnTravel > technician.ShiftEnd)
+                    {
+                        continue;
+                    }
+
+                    var nextMask = label.Mask | bit;
+                    var nextTravel = label.Travel + legTravel;
+                    var stateKey = new StateKey(nextMask, jobIndex);
+                    if (!stateBuckets.TryGetValue(stateKey, out var bucket))
+                    {
+                        bucket = [];
+                        stateBuckets[stateKey] = bucket;
+                    }
+
+                    if (IsDominated(labels, bucket, serviceEnd, nextTravel))
+                    {
+                        continue;
+                    }
+
+                    RemoveDominated(labels, bucket, serviceEnd, nextTravel);
+                    labels.Add(new(
+                        nextMask,
+                        jobIndex,
+                        serviceEnd,
+                        nextTravel,
+                        labelIndex,
+                        true));
+                    bucket.Add(labels.Count - 1);
+                }
+            }
+
+            for (var labelIndex = 1; labelIndex < labels.Count; labelIndex++)
+            {
+                var label = labels[labelIndex];
+                if (!label.Active)
+                {
+                    continue;
+                }
+
+                var returnTravel = travelJobToDepot[label.LastJobIndex];
+                var totalTravel = label.Travel + returnTravel;
+                if (label.Time + returnTravel > technician.ShiftEnd)
+                {
+                    continue;
+                }
+
+                var sequence = BuildSequence(labels, labelIndex);
+                var value = SumMaskValues(label.Mask, jobValues);
+                if (!options.TryGetValue(label.Mask, out var currentBest)
+                    || totalTravel < currentBest.Travel
+                    || (totalTravel == currentBest.Travel
+                        && IsLexicographicallySmaller(sequence, currentBest.JobIndices)))
+                {
+                    options[label.Mask] = new(
+                        label.Mask,
+                        totalTravel,
+                        value,
+                        sequence);
+                }
+            }
+
+            if (!options.ContainsKey(0))
+            {
+                options[0] = new(0, Math.Max(0, travelDepotToDepot), 0, []);
+            }
+
+            return options;
+        }
+
+        private static int GetTravel(
+            Dictionary<string, Dictionary<string, int>> travelTimes,
+            string from,
+            string to) =>
+            travelTimes.TryGetValue(from, out var row)
+            && row.TryGetValue(to, out var minutes)
+            && minutes >= 0
+                ? minutes
+                : UnreachableTravel;
+
+        private static bool IsDominated(
+            List<Label> labels,
+            List<int> bucket,
+            int serviceEnd,
+            int travel)
+        {
+            foreach (var index in bucket)
+            {
+                var existing = labels[index];
+                if (existing.Active
+                    && existing.Time <= serviceEnd
+                    && existing.Travel <= travel)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static void RemoveDominated(
+            List<Label> labels,
+            List<int> bucket,
+            int serviceEnd,
+            int travel)
+        {
+            for (var i = bucket.Count - 1; i >= 0; i--)
+            {
+                var index = bucket[i];
+                var existing = labels[index];
+                if (!existing.Active)
+                {
+                    bucket.RemoveAt(i);
+                    continue;
+                }
+
+                if (serviceEnd <= existing.Time && travel <= existing.Travel)
+                {
+                    labels[index] = existing with { Active = false };
+                    bucket.RemoveAt(i);
+                }
+            }
+        }
+
+        private static List<int> BuildSequence(List<Label> labels, int labelIndex)
+        {
+            var reverse = new List<int>();
+            var cursor = labelIndex;
+            while (cursor >= 0)
+            {
+                var label = labels[cursor];
+                if (label.LastJobIndex >= 0)
+                {
+                    reverse.Add(label.LastJobIndex);
+                }
+                cursor = label.PreviousLabelIndex;
+            }
+            reverse.Reverse();
+            return reverse;
+        }
+
+        private static int SumMaskValues(ulong mask, int[] jobValues)
+        {
+            var value = 0;
+            for (var i = 0; i < jobValues.Length; i++)
+            {
+                if ((mask & (1UL << i)) != 0)
+                {
+                    value += jobValues[i];
+                }
+            }
+            return value;
+        }
+
+        private static ulong[] Append(ulong[] values, ulong next)
+        {
+            var appended = new ulong[values.Length + 1];
+            Array.Copy(values, appended, values.Length);
+            appended[^1] = next;
+            return appended;
+        }
+
+        private static bool IsBetterGlobalState(
+            GlobalState candidate,
+            GlobalState current)
+        {
+            if (candidate.ServedValue != current.ServedValue)
+            {
+                return candidate.ServedValue > current.ServedValue;
+            }
+
+            if (candidate.TotalTravel != current.TotalTravel)
+            {
+                return candidate.TotalTravel < current.TotalTravel;
+            }
+
+            return IsLexicographicallySmaller(
+                candidate.ChosenMasks,
+                current.ChosenMasks);
+        }
+
+        private static bool IsLexicographicallySmaller(
+            IReadOnlyList<int> left,
+            IReadOnlyList<int> right)
+        {
+            var length = Math.Min(left.Count, right.Count);
+            for (var i = 0; i < length; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return left[i] < right[i];
+                }
+            }
+            return left.Count < right.Count;
+        }
+
+        private static bool IsLexicographicallySmaller(
+            IReadOnlyList<ulong> left,
+            IReadOnlyList<ulong> right)
+        {
+            var length = Math.Min(left.Count, right.Count);
+            for (var i = 0; i < length; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return left[i] < right[i];
+                }
+            }
+            return left.Count < right.Count;
+        }
+
+        private sealed record RouteOption(
+            ulong Mask,
+            int Travel,
+            int Value,
+            List<int> JobIndices);
+
+        private sealed record GlobalState(
+            int ServedValue,
+            int TotalTravel,
+            ulong[] ChosenMasks);
+
+        private sealed record Label(
+            ulong Mask,
+            int LastJobIndex,
+            int Time,
+            int Travel,
+            int PreviousLabelIndex,
+            bool Active);
+
+        private readonly record struct StateKey(ulong Mask, int LastJobIndex);
+    }

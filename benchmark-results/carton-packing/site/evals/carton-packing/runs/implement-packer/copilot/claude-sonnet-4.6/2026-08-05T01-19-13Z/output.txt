@@ -1,0 +1,17 @@
+All 9/9 visible tests pass.
+
+## Summary
+
+**Algorithm:** Greedy extreme-point 3D bin packer with knapsack-style carton ordering.
+
+1. **Carton ordering:** Sort by value/weight density descending (then value, then ID) so higher-value items are placed first — this naturally handles the weight-limit knapsack tradeoff.
+
+2. **Extreme-point placement:** Maintain a `SortedSet<(Z,Y,X)>` of candidate positions. After each placement, add three new extreme points (at the right face, back face, and top face). Iterating in `(Z,Y,X)` order fills bottom → front → left first.
+
+3. **Validity checks per candidate:** bounds, no overlap (O(n) scan), and full-base support (using the provided `PackingValidator.HasFullBaseSupport`). Support is only checked when `Z > 0`.
+
+4. **Orientation handling:** Delegates to `OrientationGenerator.GetOrientations` (up to 6 permutations; 2 for `keepUpright` cartons with fixed height).
+
+5. **Determinism:** All sorting is by stable, deterministic keys — no randomness or hash-dependent ordering.
+
+**Tests run:** `dotnet run --project visible-tests\CartonPacking.VisibleTests` — 9/9 passed (4 helper tests + 5 engine tests: exact-fit, rotation-required, value-under-weight, upright-restriction, determinism).

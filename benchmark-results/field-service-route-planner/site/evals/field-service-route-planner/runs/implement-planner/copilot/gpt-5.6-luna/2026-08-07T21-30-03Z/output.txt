@@ -1,0 +1,7 @@
+Implemented `RoutePlanner.Plan` with deterministic exact optimization:
+
+- Pareto dynamic programming for feasible technician routes, respecting skills, windows, shifts, waiting, asymmetric travel, and depot returns.
+- Global disjoint-route DP maximizing served value, then minimizing total travel.
+- Canonical technician ordering and deterministic tie-breaking.
+
+`dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` passes all **8/8** visible tests.

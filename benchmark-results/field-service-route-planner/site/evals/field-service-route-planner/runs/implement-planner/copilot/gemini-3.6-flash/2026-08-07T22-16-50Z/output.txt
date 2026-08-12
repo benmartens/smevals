@@ -1,0 +1,11 @@
+### Summary of Algorithm & Tests
+
+#### Algorithm
+`RoutePlanner.Plan` implements a deterministic strategy to lexicographically maximize served job value and minimize total travel time:
+1. **Canonical Indexing:** Technicians are sorted by ID (`StringComparer.Ordinal`) to guarantee canonical output order. Locations and skills are indexed for $O(1)$ matrix and capability checks.
+2. **Branch & Bound Solver ($N \le 64$):** Evaluates exact permutations using bitmask state tracking, Pareto dominance memoization `(time, travel)`, upper-bound value pruning, and consecutive identical technician symmetry breaking.
+3. **Metaheuristic Fallback & Refinement:** For larger problems or timeouts, ALNS + Variable Neighborhood Local Search (2-Opt, Relocate, Swap, Unassigned Insertion/Replacement) optimizes routes deterministically (`Random(42)`).
+
+#### Tests Run
+- `visible-tests`: 8/8 passed (4 validator tests, 4 engine tests: basic planning, skill assignment, combined value choice, and determinism).
+- `FieldServiceRoutePlanner.Cli`: Validated against `scenarios/basic.json` and `scenarios/waiting.json`.

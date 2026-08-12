@@ -1,0 +1,10 @@
+Implemented `ReplicatedShardRebalancer.Rebalance` as a deterministic exact solver that now returns valid canonical target placements and optimizes the required lexicographic objective.  
+It now:
+
+1. Sorts shards/nodes canonically and precomputes per-shard feasible replica sets (respecting exclusions, per-replica capacity eligibility, and maximum feasible zone diversity).
+2. Runs a deterministic branch-and-bound search over shard placements with hard capacity checks.
+3. Compares solutions lexicographically by **max utilization**, **utilization spread**, **moved bytes**, **moved replica count**, then full placement lexicographic order (using exact rational comparisons for utilization/spread).
+
+**Tests run:**
+1. `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` → **9/9 visible tests passed**.
+2. `dotnet run --project src\ReplicatedShardRebalancer.Cli -- scenarios\small-cluster.json result.json` → exited successfully with built-in validator checks passing.

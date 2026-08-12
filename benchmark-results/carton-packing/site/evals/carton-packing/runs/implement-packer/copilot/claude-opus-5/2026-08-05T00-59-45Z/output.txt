@@ -1,0 +1,17 @@
+All green. Implementation complete.
+
+**Algorithm** (`src/CartonPacking/CartonPacker.cs`)
+
+*Preprocessing* — drop invalid/duplicate cartons, keep only orientations that fit the container, and cap each quantity by container volume and weight limit.
+
+*Placement primitive* — candidate positions are corner points (0 plus every right/front face of placed cartons). For a footprint, the resting `z` is the max top of overlapping cartons; the position is accepted only if the surface is **perfectly flat** there (covered area == footprint area). That single test simultaneously guarantees no overlap and 100% base support, including support shared across several lower cartons.
+
+*Greedy run* — walk an ordering of carton kinds, placing instances until one fails; since free space and remaining weight only shrink, a failed kind is permanently blocked, so each run terminates in a maximal layout.
+
+*Multi-start search* — 6 deterministic orderings (value, value/weight, value/volume, volume, normalized value density, max-dimension) × 3 placement rules (deep-bottom-left, left-bottom-deep, max-contact), plus interleaved runs, per-kind promote/exclude variants, and a bounded-knapsack pass over the weight limit (binary splitting, value then volume tie-break) that caps quantities when weight is the binding constraint. The best layout by (value, volume) wins; a deterministic work budget bounds runtime.
+
+*Output* — instances numbered per carton by (x, y, z), emitted sorted by cartonId/instance/x/y/z. No randomness, no time-based cutoffs, no new dependencies.
+
+**Tests run**
+- `dotnet run --project visible-tests\CartonPacking.VisibleTests` → **9/9 pass** (orientations, touching, shared/partial support, exact-fit 8 cubes/value 80, rotation-required, weight-value trap = 18, upright rejection, determinism).
+- CLI + supplied validator on `scenarios\exact-fit.json`, `scenarios\rotation-required.json`, plus two ad-hoc scenarios (5 mixed carton types with upright/weight pressure; 690 items across 4 types in 30×30×30) — all exit 0 with zero validation issues; the large case packed 276 cartons well inside the work budget.

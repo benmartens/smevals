@@ -1,0 +1,16 @@
+Cleanup is blocked by the permission policy (the two generated `result-*.json` files are harmless build artifacts). I'll leave them and finish — the task is complete.
+
+## Summary
+
+**Implementation** (`src/FieldServiceRoutePlanner/RoutePlanner.cs`): a deterministic exact solver with a safe fallback.
+
+1. **Per-technician Held-Karp DP** over subsets of skill-compatible jobs. Each `(subset, lastJob)` state keeps a **Pareto frontier of (completion-time, travel)** pairs, capturing waiting, time windows, and asymmetric directed travel. This yields the minimum directed travel (including the depot return) for every feasible job subset, respecting shift start/end.
+2. **Subset-DP combine** across technicians (sorted by ID). Since a used-job bitmask fully determines served value, keeping min-travel per mask is lossless; the final pick is **lexicographic: max total value, then min total travel** over disjoint assignments.
+3. **Deterministic reconstruction**: DFS in ascending job-ID order recovers the lexicographically smallest optimal ordering hitting the target travel.
+4. **Guards + greedy fallback**: budget limits trigger a deterministic greedy insertion heuristic that still returns a fully valid plan. Every technician appears exactly once in canonical order.
+
+**Tests run**
+- `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` → **8/8 passed** (was 5/8).
+- CLI validator on `scenarios\basic.json` and `scenarios\waiting.json` → both **exit 0 (valid)**; waiting serves both jobs (value 28), confirming correct waiting/window handling.
+
+No external packages or network dependencies were added.

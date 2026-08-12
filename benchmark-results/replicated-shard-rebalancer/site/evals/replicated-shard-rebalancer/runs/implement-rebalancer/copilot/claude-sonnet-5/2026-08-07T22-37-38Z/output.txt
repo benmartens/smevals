@@ -1,0 +1,12 @@
+Implementation complete — all 9 visible tests pass, and the CLI produced a validated, optimal result on the sample scenario (result.json cleanup was blocked by permissions but is a harmless artifact).
+
+## Algorithm summary
+
+**`ReplicatedShardRebalancer.cs`** implements an exact branch-and-bound solver:
+
+1. **Candidate generation per shard**: For each shard, compute eligible nodes (capacity ≥ size, not excluded) and the required zone diversity `min(replicationFactor, distinct zones among eligible)`. Recursively enumerate all replica-count-sized node combinations achieving *exactly* that diversity, pruning via suffix zone-count bounds. Each candidate stores its moved-bytes/moved-replicas cost vs. current placement.
+2. **Branch-and-bound search**: Shards are branched in most-constrained-first order (fewest candidates) for efficiency. A greedy pass first seeds a valid complete solution (minimizing max utilization, then spread, bytes, replicas at each step) so pruning is effective immediately. The exhaustive DFS then explores all remaining combinations, pruning branches whose partial node loads already exceed the best max-utilization found, or whose remaining-shard minimum moved-bytes/replicas can't beat the incumbent.
+3. **Tie-breaking**: Complete assignments are compared lexicographically on `(maxUtilization, spread, movedBytes, movedReplicas)`; true ties fall back to comparing the ordinally sorted placement itself, guaranteeing deterministic, canonical output.
+4. A deterministic node-visit budget (not time-based) bounds worst-case runtime while preserving reproducibility.
+
+**Tests run**: `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` → 9/9 passed (metrics, duplicate/exclusion/zone/capacity/ordering validation, overload repair, exclusion honoring, determinism). Also validated via `dotnet run --project src\ReplicatedShardRebalancer.Cli` against `scenarios\small-cluster.json`, producing a validator-clean, optimally balanced result (max utilization 0.5, zero unnecessary moves for the `orders` shard).

@@ -1,0 +1,6 @@
+Implemented `QueryOptimizer.Optimize` with deterministic connected-subset dynamic programming, legal scan/index-seek selection, canonical join ordering, and memory-aware nested-loop/hash/merge join planning.
+
+Validation completed successfully:
+
+- `dotnet run --project visible-tests\QueryOptimizer.VisibleTests` — **7/7 passed**
+- Full solution build — **0 warnings, 0 errors**

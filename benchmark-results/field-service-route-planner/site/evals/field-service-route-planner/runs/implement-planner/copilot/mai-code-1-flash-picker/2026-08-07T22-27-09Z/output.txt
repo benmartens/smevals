@@ -1,0 +1,5 @@
+Implemented an exact deterministic planner in `src/FieldServiceRoutePlanner/RoutePlanner.cs` that preserves the existing JSON/CLI contract. It enumerates feasible per-technician routes while honoring skills, waiting at windows, service durations, shift end, and return-to-depot travel, then uses dynamic programming over technician/job masks to choose the non-overlapping combination that maximizes total served job value and, on ties, minimizes total travel. The output remains one route per technician in technician-ID order.
+
+Tests run:
+- `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests`
+- Result: 8/8 visible tests passed.

@@ -1,0 +1,6 @@
+{
+  "model": "gpt-5.6-luna",
+  "label": "GPT-5.6 Luna",
+  "effort": "max",
+  "maxAiCredits": 500
+}

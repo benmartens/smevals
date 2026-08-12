@@ -1,0 +1,124 @@
+grader: default
+graded: '2026-08-05T14:18:16.008494+00:00'
+outcome: pass
+score: 1.0
+tags:
+- all_valid
+- deterministic
+- high_score
+checks:
+- checker: ../checkers/grade-carton-packing.py
+  ok: true
+  score: 1.0
+  metrics:
+    build_ok: true
+    valid_layout_rate: 1.0
+    average_value_ratio: 1.0
+    average_volume_ratio: 1.0
+    deterministic: true
+    hidden_cases_valid: 8
+    hidden_cases_total: 8
+    runtime_ms: 2702
+  tags:
+  - all_valid
+  - deterministic
+  - high_score
+  notes: All cases valid and deterministic
+  details:
+    per_case_details:
+    - case_id: exact_basic
+      weight: 0.25
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 148
+      candidate_volume: 504
+      reference_value: 148
+      reference_volume: 504
+      issues: []
+      runtime_ms: 172
+    - case_id: rotation_required
+      weight: 0.25
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 21
+      candidate_volume: 105
+      reference_value: 21
+      reference_volume: 105
+      issues: []
+      runtime_ms: 94
+    - case_id: weight_value_tradeoff
+      weight: 3.0
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 54
+      candidate_volume: 216
+      reference_value: 54
+      reference_volume: 216
+      issues: []
+      runtime_ms: 93
+    - case_id: upright_only
+      weight: 0.25
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 92
+      candidate_volume: 282
+      reference_value: 92
+      reference_volume: 282
+      issues: []
+      runtime_ms: 92
+    - case_id: mixed_quantities
+      weight: 1.0
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 96
+      candidate_volume: 688
+      reference_value: 96
+      reference_volume: 688
+      issues: []
+      runtime_ms: 109
+    - case_id: support_stacking
+      weight: 4.0
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 66
+      candidate_volume: 720
+      reference_value: 66
+      reference_volume: 720
+      issues: []
+      runtime_ms: 94
+    - case_id: greedy_trap
+      weight: 4.0
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 500
+      candidate_volume: 1000
+      reference_value: 500
+      reference_volume: 1000
+      issues: []
+      runtime_ms: 109
+    - case_id: dense_showcase
+      weight: 1.0
+      valid: true
+      score: 1.0
+      value_ratio: 1.0
+      volume_ratio: 1.0
+      candidate_value: 324
+      candidate_volume: 838
+      reference_value: 324
+      reference_volume: 838
+      issues: []
+      runtime_ms: 170

@@ -1,0 +1,3 @@
+Implemented `Rebalance` using deterministic branch-and-bound search with exact rational objectives, capacity/zone pruning, movement minimization, memoization, and ordinal tie-breaking.
+
+**Tests:** 9/9 visible tests pass; supplied CLI validator passes sample and `long.MaxValue` edge scenarios; Release build succeeds with zero warnings.

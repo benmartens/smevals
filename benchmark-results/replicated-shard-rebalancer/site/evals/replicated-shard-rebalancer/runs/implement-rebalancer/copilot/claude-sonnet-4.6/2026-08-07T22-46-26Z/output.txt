@@ -1,0 +1,17 @@
+All 9/9 visible tests pass.
+
+## Algorithm Summary
+
+**`Rebalance` implementation** in `src/ReplicatedShardRebalancer/ReplicatedShardRebalancer.cs`:
+
+1. **Preprocessing**: Build ordinal-sorted node/shard lists and lookup structures for exclusions and current placements.
+
+2. **Processing order**: Shards are assigned largest-first (by size, then by ID) so the most capacity-demanding shards get unconstrained first picks — a standard heuristic for packing problems.
+
+3. **Combination enumeration**: For each shard, enumerate all k-subsets of eligible nodes (non-excluded, `capacity ≥ shard.size`) using an index-walking algorithm that naturally yields combinations in lexicographic order.
+
+4. **Zone diversity filter**: Each combination is checked against the required diversity (`min(replicationFactor, distinct eligible zones)`).
+
+5. **Objective scoring**: Each valid combination is scored as the tuple **(maxUtil, spread, movedBytes, movedReplicas, nodeIds lex)**. The combination with the lexicographically smallest tuple wins. Utilization is computed over *all* nodes (not just the combo) to reflect the global load state after assignment.
+
+6. **Output**: Placements are emitted sorted by shard ID; each `nodeIds` array is sorted by node ID, satisfying the canonical ordering requirement.

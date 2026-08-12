@@ -1,0 +1,22 @@
+### Summary of Algorithm and Testing
+
+#### Algorithm
+`CartonPacker.Pack` implements a deterministic, multi-strategy 3D packing engine designed to maximize total shipment value and packed volume under container weight, volume, rotation, orientation (`keepUpright`), and full-base support constraints:
+
+1. **Exact Bounded Depth-First Search (DFS)**: For smaller problem instances ($\le 16$ instances), runs exact DFS with upper-bound pruning and canonical state exploration to find mathematically optimal placements.
+2. **Multi-Start Priority & Block Packing Heuristics**: Generates candidate placement positions via corner/boundary extreme point projections. Evaluates carton sort metrics (value/weight ratio, value/volume ratio, footprint area, surface contact score) and macro block building ($k_x \times k_y \times k_z$) with deterministic pseudo-random GRASP passes.
+3. **Iterated Greedy Local Search**: Performs post-optimization by selectively removing low-density items and re-packing remaining space with higher-value unpacked cartons.
+4. **Validation & Canonical Sorting**: Reuses `PackingValidator.HasFullBaseSupport` and `PackingValidator.Overlaps` to guarantee valid 3D placements, sorting final results by `CartonId` (ordinal), `Instance`, `X`, `Y`, and `Z`.
+
+#### Tests Run
+- Executed `dotnet run --project visible-tests\CartonPacking.VisibleTests` (9/9 passed):
+  - Orientation Permutations
+  - Touching Cartons Overlap Check
+  - Shared Full Base Support
+  - Partial Support Rejection
+  - Exact-Fit Packing
+  - Rotation-Required Packing
+  - Value Under Weight Limit
+  - Upright Restriction
+  - Deterministic Output
+- Validated JSON CLI contract execution via `dotnet run --project src\CartonPacking.Cli` on `exact-fit.json` and `rotation-required.json`.

@@ -1,0 +1,13 @@
+Implementation complete and validated.
+
+**Algorithm** (`src/FieldServiceRoutePlanner/`, new files `PlanningModel.cs`, `RouteLabelDp.cs`, `PlanningSolver.cs`; `RoutePlanner.Plan` wires them up):
+
+1. **Normalization** — technicians/jobs filtered by the validator's own validity rules, deduped, sorted ordinally; locations indexed with depot at 0; a Floyd–Warshall shortest-path matrix provides *valid* lower bounds for pruning (direct depot legs are unsafe because travel is asymmetric and non-metric).
+2. **Exact path** (≤16 jobs, or ≤18 with one technician): per-technician label DP over `(job subset, last job)` keeping Pareto-optimal `(service end, travel)` labels — handles waiting, windows, shift return — yielding min travel for *every* servable subset; then a subset-partition min-plus DP across technicians. The best mask is chosen by max value, then min travel, and routes are reconstructed via parent pointers.
+3. **Fallback** (larger instances): deterministic greedy insertion under three selection criteria, plus local search (optimal intra-route re-sequencing via the same DP, relocate, swap, eject-and-refill), best plan chosen by (value, travel, canonical content).
+
+Determinism comes from fixed orderings and iteration/label budgets — no wall-clock cutoffs.
+
+**Tests run:** `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` → **8/8 pass**. CLI on `scenarios\basic.json` and `scenarios\waiting.json` → exit 0, validator clean. A temporary stress harness compared the planner against a brute-force optimum on 400 random instances (1–3 techs, 1–8 jobs): **all matched optimal value and travel**, all deterministic; 31 larger instances (2–5 techs, 12–29 jobs) were all valid, worst case 38 ms. Two bugs were found and fixed this way: a divide-by-zero on negative insertion deltas, and the invalid direct-travel eligibility filter.
+
+**Remaining:** the temporary `tmp-stress\` project and `out\*.json` files are still in the workspace — the shell blocked `Remove-Item`/`New-Item`, so they could not be deleted; they are not part of the solution file and do not affect the build or tests, but should be removed manually. The final stress re-run after correcting my own (incorrect) `shortcut` edge-case expectation from 51 to 1 was not executed; the planner's answer of 1 there is provably optimal since the direct `far→depot` leg of 90 exceeds the 60-minute shift.

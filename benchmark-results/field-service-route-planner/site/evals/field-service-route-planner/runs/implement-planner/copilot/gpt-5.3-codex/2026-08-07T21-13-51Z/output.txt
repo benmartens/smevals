@@ -1,0 +1,6 @@
+Implemented `RoutePlanner.Plan` in `src/FieldServiceRoutePlanner/RoutePlanner.cs` with a deterministic two-stage optimizer that preserves the JSON/CLI contract: it first enumerates each technician’s feasible routes using a label-setting DP (`(served-job-mask, last-job)` with nondominated `(time, travel)` labels) to enforce skills, windows, shift timing, waiting, and return-to-depot, then runs a cross-technician DP over disjoint job masks to **lexicographically maximize served value, then minimize total directed travel**. Output routes are always canonical (one per technician, technician IDs in ordinal order), and tie-breaking is deterministic.
+
+Ran:
+1. `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` → **8/8 visible tests passed**.
+2. `dotnet run --project src\FieldServiceRoutePlanner.Cli -- scenarios\basic.json scenarios\basic.result.json` → exit 0 (validator accepted).
+3. `dotnet run --project src\FieldServiceRoutePlanner.Cli -- scenarios\waiting.json scenarios\waiting.result.json` → exit 0 (validator accepted).

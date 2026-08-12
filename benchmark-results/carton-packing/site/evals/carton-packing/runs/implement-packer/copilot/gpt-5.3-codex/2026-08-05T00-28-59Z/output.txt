@@ -1,0 +1,7 @@
+Implemented `CartonPacker.Pack` with a deterministic supported-space beam search that now returns valid placements and passes all visible tests. The algorithm builds fit-valid orientations per carton, places only at fully supported free-space origins, splits/merges free spaces deterministically, enforces quantity and weight limits, and ranks/prunes states lexicographically to prioritize **total value first, then packed volume**. Final placements are emitted in canonical sorted order with deterministic instance numbering.
+
+Ran:
+
+`dotnet run --project visible-tests\CartonPacking.VisibleTests`
+
+Result: **9/9 visible tests passed.**

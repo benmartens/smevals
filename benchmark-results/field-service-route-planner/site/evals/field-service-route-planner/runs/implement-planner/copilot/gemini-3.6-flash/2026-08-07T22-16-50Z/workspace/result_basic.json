@@ -1,0 +1,10 @@
+{
+  "routes": [
+    {
+      "technicianId": "tech-a",
+      "jobIds": [
+        "job-1"
+      ]
+    }
+  ]
+}

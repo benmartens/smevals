@@ -1,0 +1,139 @@
+{
+  "score": 0.993347,
+  "metrics": {
+    "build_ok": true,
+    "valid_plan_rate": 1.0,
+    "average_cost_ratio": 0.9933,
+    "deterministic": true,
+    "hidden_cases_valid": 7,
+    "hidden_cases_total": 7,
+    "runtime_ms": 4373
+  },
+  "tags": [
+    "all_valid",
+    "deterministic",
+    "high_score"
+  ],
+  "notes": "All cases valid and deterministic",
+  "per_case_details": [
+    {
+      "case_id": "selective_index",
+      "weight": 0.25,
+      "valid": true,
+      "score": 1.0,
+      "cost_ratio": 1.0,
+      "candidate_cost": 2981,
+      "reference_cost": 2981,
+      "issues": [],
+      "runtime_ms": 357,
+      "metrics": {
+        "estimated_rows": 739,
+        "total_cost": 2981,
+        "peak_memory_rows": 1,
+        "operator_count": 1
+      }
+    },
+    {
+      "case_id": "join_order_trap",
+      "weight": 2.0,
+      "valid": true,
+      "score": 1.0,
+      "cost_ratio": 1.0,
+      "candidate_cost": 2059725,
+      "reference_cost": 2059725,
+      "issues": [],
+      "runtime_ms": 186,
+      "metrics": {
+        "estimated_rows": 102400,
+        "total_cost": 2059725,
+        "peak_memory_rows": 500,
+        "operator_count": 7
+      }
+    },
+    {
+      "case_id": "memory_spill",
+      "weight": 2.0,
+      "valid": true,
+      "score": 1.0,
+      "cost_ratio": 1.0,
+      "candidate_cost": 16995,
+      "reference_cost": 16995,
+      "issues": [],
+      "runtime_ms": 178,
+      "metrics": {
+        "estimated_rows": 317,
+        "total_cost": 16995,
+        "peak_memory_rows": 12,
+        "operator_count": 5
+      }
+    },
+    {
+      "case_id": "star_schema",
+      "weight": 3.0,
+      "valid": true,
+      "score": 1.0,
+      "cost_ratio": 1.0,
+      "candidate_cost": 1157497991,
+      "reference_cost": 1157497991,
+      "issues": [],
+      "runtime_ms": 183,
+      "metrics": {
+        "estimated_rows": 138240,
+        "total_cost": 1157497991,
+        "peak_memory_rows": 1000,
+        "operator_count": 11
+      }
+    },
+    {
+      "case_id": "chain_eight",
+      "weight": 3.0,
+      "valid": true,
+      "score": 1.0,
+      "cost_ratio": 1.0,
+      "candidate_cost": 549370232,
+      "reference_cost": 549370232,
+      "issues": [],
+      "runtime_ms": 183,
+      "metrics": {
+        "estimated_rows": 3,
+        "total_cost": 549370232,
+        "peak_memory_rows": 200,
+        "operator_count": 15
+      }
+    },
+    {
+      "case_id": "snowflake_ten",
+      "weight": 4.0,
+      "valid": true,
+      "score": 0.973298,
+      "cost_ratio": 0.973298,
+      "candidate_cost": 5160493,
+      "reference_cost": 5022698,
+      "issues": [],
+      "runtime_ms": 192,
+      "metrics": {
+        "estimated_rows": 1,
+        "total_cost": 5160493,
+        "peak_memory_rows": 200,
+        "operator_count": 19
+      }
+    },
+    {
+      "case_id": "dense_twelve",
+      "weight": 4.0,
+      "valid": true,
+      "score": 0.996348,
+      "cost_ratio": 0.996348,
+      "candidate_cost": 14320299,
+      "reference_cost": 14267999,
+      "issues": [],
+      "runtime_ms": 202,
+      "metrics": {
+        "estimated_rows": 1,
+        "total_cost": 14320299,
+        "peak_memory_rows": 1000,
+        "operator_count": 23
+      }
+    }
+  ]
+}

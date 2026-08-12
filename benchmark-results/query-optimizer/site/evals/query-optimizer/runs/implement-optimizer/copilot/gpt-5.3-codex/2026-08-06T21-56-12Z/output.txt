@@ -1,0 +1,14 @@
+Implemented `QueryOptimizer.Optimize` with a deterministic cost-based planner that now returns valid physical plans and passes the visible suite.
+
+The algorithm now:
+1. Sorts tables by ID to enforce canonical subtree ordering.
+2. Chooses the cheapest legal leaf per table (`tableScan` vs `indexSeek` with an indexable predicate).
+3. Precomputes subset cardinalities with integer/saturating arithmetic.
+4. Uses subset DP to find the minimum-cost plan for each table subset, considering `nestedLoop`, `hashJoin`, and `mergeJoin` only when a declared join edge crosses the split, with deterministic structural tie-breaking.
+5. Falls back to a deterministic greedy join builder for larger table counts.
+
+Ran:
+
+`dotnet run --project visible-tests\QueryOptimizer.VisibleTests`
+
+Result: **7/7 visible tests passed**.

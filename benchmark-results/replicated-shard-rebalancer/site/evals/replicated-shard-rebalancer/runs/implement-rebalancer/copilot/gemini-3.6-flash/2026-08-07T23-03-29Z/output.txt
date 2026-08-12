@@ -1,0 +1,22 @@
+Implemented `ReplicatedShardRebalancer.Rebalance` in `src/ReplicatedShardRebalancer/ReplicatedShardRebalancer.cs`.
+
+### Summary of Algorithm
+1. **Canonical Sorting & Input Preparation**: Nodes and shards are sorted ordinally by ID (`StringComparer.Ordinal`).
+2. **Candidate Generation**: Generates all valid replica node combinations of size `ReplicationFactor` for each shard satisfying node capacity, exclusion rules, and maximum zone diversity (`RebalanceValidator.MaximumZoneDiversity`).
+3. **Warm Start Heuristics & Local Search**: Evaluates greedy initial strategies and applies local candidate swaps to establish a tight upper bound on maximum utilization, spread, moved bytes, and moved replicas.
+4. **Exact Branch-and-Bound Search**: Executes Depth-First Search with state memoization (by node load vectors) and lower-bound pruning across maximum node utilization, moved bytes, and moved replicas.
+5. **Deterministic Output**: Guarantees lexicographical minimization of `(MaxUtilization, UtilizationSpread, MovedBytes, MovedReplicaCount)` with ordinal choice tie-breaking and canonical sorting for all target placements.
+
+### Test Results
+Ran `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` with **9/9 tests passing**:
+- `valid target metrics`
+- `duplicate replica rejected`
+- `exclusion rejected`
+- `zone diversity required`
+- `capacity enforced`
+- `canonical ordering required`
+- `overload is repaired`
+- `exclusions are honored`
+- `deterministic output`
+
+CLI validation on `scenarios/small-cluster.json` also completed successfully with zero validation with code 0.

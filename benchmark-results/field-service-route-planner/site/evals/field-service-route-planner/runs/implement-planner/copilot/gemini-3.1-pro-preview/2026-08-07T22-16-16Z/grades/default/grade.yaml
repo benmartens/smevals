@@ -1,0 +1,167 @@
+grader: default
+graded: '2026-08-07T22:31:40.635952+00:00'
+outcome: fail
+score: 0.0
+tags:
+- asymmetric_travel
+- clustering
+- cross_technician
+- invalid_routes
+- ordering
+- skills
+- time_windows
+- value_tradeoff
+- value_trap
+- waiting
+checks:
+- checker: ../checkers/grade-field-service-route-planner.py
+  ok: true
+  score: 0.0
+  metrics:
+    build_succeeded: true
+    valid_route_rate: 0.0
+    average_value_ratio: 0.0
+    average_travel_ratio: 0.0
+    deterministic: true
+  tags:
+  - asymmetric_travel
+  - clustering
+  - cross_technician
+  - invalid_routes
+  - ordering
+  - skills
+  - time_windows
+  - value_tradeoff
+  - value_trap
+  - waiting
+  notes: Independent validation; exact bounded references.
+  details:
+    per_case_details:
+    - case_id: skills
+      weight: 0.5
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 58
+      reference_travel: 52
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 376
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: time_windows
+      weight: 1.5
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 33
+      reference_travel: 21
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 195
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: clustering
+      weight: 2.5
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 24
+      reference_travel: 14
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 215
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: value_trap
+      weight: 3.0
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 22
+      reference_travel: 14
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 208
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: waiting
+      weight: 1.0
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 39
+      reference_travel: 29
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 205
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: asymmetric_travel
+      weight: 2.0
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 26
+      reference_travel: 13
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 207
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: cross_technician
+      weight: 3.0
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 37
+      reference_travel: 36
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 225
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3
+    - case_id: showcase
+      weight: 1.5
+      valid: false
+      score: 0.0
+      value_ratio: 0.0
+      travel_ratio: 0.0
+      candidate_value: 0
+      candidate_travel: 0
+      reference_value: 110
+      reference_travel: 79
+      issues:
+      - code: technician_routes
+        detail: one route per technician
+      runtime_ms: 213
+      cli_stderr: 'technician_routes: Return exactly one route for every technician.'
+      cli_exit_code: 3

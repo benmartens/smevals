@@ -1,0 +1,303 @@
+{
+  "eval": "carton-packing",
+  "grader": "default",
+  "grader_version": "7ea8cde",
+  "excluded_failed_runs": 0,
+  "rows": [
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "claude-opus-4.8",
+      "outcome": "pass",
+      "score": 0.874689,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.8776,
+        "average_volume_ratio": 0.8484,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2905
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\claude-opus-4.8\\2026-08-05T01-21-18Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "claude-opus-5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2702
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\claude-opus-5\\2026-08-05T00-59-45Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "claude-sonnet-4.6",
+      "outcome": "pass",
+      "score": 0.864331,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.8688,
+        "average_volume_ratio": 0.8242,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2312
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\claude-sonnet-4.6\\2026-08-05T01-19-13Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "claude-sonnet-5",
+      "outcome": "pass",
+      "score": 0.921322,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.9207,
+        "average_volume_ratio": 0.9273,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2327
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\claude-sonnet-5\\2026-08-05T01-11-26Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gemini-3.1-pro-preview",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 3797
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gemini-3.1-pro-preview\\2026-08-05T01-32-42Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gemini-3.6-flash",
+      "outcome": "pass",
+      "score": 0.953367,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.9569,
+        "average_volume_ratio": 0.9212,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4922
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gemini-3.6-flash\\2026-08-05T01-39-15Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gpt-5-mini",
+      "outcome": "pass",
+      "score": 0.864331,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.8688,
+        "average_volume_ratio": 0.8242,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2344
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gpt-5-mini\\2026-08-05T00-26-29Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gpt-5.3-codex",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 3140
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gpt-5.3-codex\\2026-08-05T00-28-59Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gpt-5.6-luna",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 4937
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gpt-5.6-luna\\2026-08-05T00-54-22Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gpt-5.6-sol",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 11875
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gpt-5.6-sol\\2026-08-05T00-33-01Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "gpt-5.6-terra",
+      "outcome": "pass",
+      "score": 0.953367,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 0.9569,
+        "average_volume_ratio": 0.9212,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 2687
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\gpt-5.6-terra\\2026-08-05T00-47-05Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "grok-4.5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 1.0,
+        "average_value_ratio": 1.0,
+        "average_volume_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 8,
+        "hidden_cases_total": 8,
+        "runtime_ms": 5827
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\grok-4.5\\2026-08-05T01-42-51Z"
+    },
+    {
+      "task": "implement-packer",
+      "config": "copilot",
+      "model": "mai-code-1-flash-picker",
+      "outcome": "pass",
+      "score": 0.709091,
+      "tags": [
+        "deterministic",
+        "issue_run_failure"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_layout_rate": 0.875,
+        "average_value_ratio": 0.7091,
+        "average_volume_ratio": 0.7091,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 8,
+        "runtime_ms": 32187
+      },
+      "run_dir": "C:\\git\\smevals\\examples\\carton-packing\\runs\\implement-packer\\copilot\\mai-code-1-flash-picker\\2026-08-05T14-14-12Z"
+    }
+  ]
+}

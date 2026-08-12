@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="325">
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<text x="18" y="27" font-family="sans-serif" font-size="18" font-weight="bold" fill="#172554">Showcase technician timelines</text>
+<text x="12" y="80" font-family="monospace" font-size="13" fill="#111827">alpha</text>
+<line x1="150.0" y1="80" x2="918.5" y2="80" stroke="#94a3b8" stroke-width="3"/>
+<line x1="150.0" y1="80" x2="192.4" y2="80" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="192.4" y="64" width="84.8" height="32" rx="4" fill="#2563eb" fill-opacity="0.82"/>
+<text x="196.4" y="85" font-family="sans-serif" font-size="11" fill="white">n-panel @ n1</text>
+<line x1="277.2" y1="80" x2="298.4" y2="80" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="298.4" y="64" width="63.6" height="32" rx="4" fill="#059669" fill-opacity="0.82"/>
+<text x="302.4" y="85" font-family="sans-serif" font-size="11" fill="white">n-inspect @ n2</text>
+<text x="150" y="118" font-family="monospace" font-size="11" fill="#475569">return=49, travel=21</text>
+<text x="12" y="170" font-family="monospace" font-size="13" fill="#111827">beta</text>
+<line x1="176.5" y1="170" x2="945.0" y2="170" stroke="#94a3b8" stroke-width="3"/>
+<line x1="176.5" y1="170" x2="213.6" y2="170" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="213.6" y="154" width="106.0" height="32" rx="4" fill="#2563eb" fill-opacity="0.82"/>
+<text x="217.6" y="175" font-family="sans-serif" font-size="11" fill="white">s-leak @ s1</text>
+<line x1="319.6" y1="170" x2="468.0" y2="170" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="468.0" y="154" width="74.2" height="32" rx="4" fill="#059669" fill-opacity="0.82"/>
+<text x="472.0" y="175" font-family="sans-serif" font-size="11" fill="white">s-audit @ s2</text>
+<text x="150" y="208" font-family="monospace" font-size="11" fill="#475569">return=82, travel=19</text>
+<text x="12" y="260" font-family="monospace" font-size="13" fill="#111827">gamma</text>
+<line x1="150.0" y1="260" x2="865.5" y2="260" stroke="#94a3b8" stroke-width="3"/>
+<line x1="150.0" y1="260" x2="309.0" y2="260" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="309.0" y="244" width="127.2" height="32" rx="4" fill="#2563eb" fill-opacity="0.82"/>
+<text x="313.0" y="265" font-family="sans-serif" font-size="11" fill="white">remote-pump @ remote</text>
+<line x1="436.2" y1="260" x2="600.5" y2="260" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="600.5" y="244" width="79.5" height="32" rx="4" fill="#059669" fill-opacity="0.82"/>
+<text x="604.5" y="265" font-family="sans-serif" font-size="11" fill="white">late-panel @ n1</text>
+<text x="150" y="298" font-family="monospace" font-size="11" fill="#475569">return=108, travel=39</text>
+</svg>

@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FieldServiceRoutePlanner", "src\FieldServiceRoutePlanner\FieldServiceRoutePlanner.csproj", "{D866139E-53B0-4274-AF72-8754CD250B62}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FieldServiceRoutePlanner.Cli", "src\FieldServiceRoutePlanner.Cli\FieldServiceRoutePlanner.Cli.csproj", "{24F42CBE-E698-42D9-B2E4-CE61C63C7F27}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FieldServiceRoutePlanner.VisibleTests", "visible-tests\FieldServiceRoutePlanner.VisibleTests\FieldServiceRoutePlanner.VisibleTests.csproj", "{87C01E9F-B4F1-4708-833A-DA2D20BC1B10}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D866139E-53B0-4274-AF72-8754CD250B62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D866139E-53B0-4274-AF72-8754CD250B62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D866139E-53B0-4274-AF72-8754CD250B62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D866139E-53B0-4274-AF72-8754CD250B62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24F42CBE-E698-42D9-B2E4-CE61C63C7F27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24F42CBE-E698-42D9-B2E4-CE61C63C7F27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24F42CBE-E698-42D9-B2E4-CE61C63C7F27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24F42CBE-E698-42D9-B2E4-CE61C63C7F27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87C01E9F-B4F1-4708-833A-DA2D20BC1B10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87C01E9F-B4F1-4708-833A-DA2D20BC1B10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87C01E9F-B4F1-4708-833A-DA2D20BC1B10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87C01E9F-B4F1-4708-833A-DA2D20BC1B10}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

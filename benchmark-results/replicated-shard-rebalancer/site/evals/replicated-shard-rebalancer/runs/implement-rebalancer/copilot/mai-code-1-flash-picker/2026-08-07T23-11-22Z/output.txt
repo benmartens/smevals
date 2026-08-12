@@ -1,0 +1,5 @@
+Implemented `ReplicatedShardRebalancer.Rebalance` with a deterministic memoized search over valid shard placements. It generates only placements that satisfy exclusions, capacity, exact replica count, and the required zone-diversity level, then evaluates full solutions in the required lexicographic order: max utilization, utilization spread, moved bytes, moved replica count, then canonical placement tie-breaks.
+
+Tests run:
+- `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests`
+- `dotnet run --project src\ReplicatedShardRebalancer.Cli -- scenarios\small-cluster.json result.json`

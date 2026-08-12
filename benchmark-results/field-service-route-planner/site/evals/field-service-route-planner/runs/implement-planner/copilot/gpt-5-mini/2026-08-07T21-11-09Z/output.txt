@@ -1,0 +1,8 @@
+Implemented RoutePlanner.Plan using per-technician subset DP and global DP to assign disjoint job subsets. Algorithm:
+- Enumerate jobs and technicians deterministically.
+- For each technician, DP over feasible local job permutations (respecting windows, waiting, returns, shifts) to find, per subset, the best service order with minimal travel.
+- Global DP combines per-technician subset choices to lexicographically maximize total served value, then minimize total travel.
+- Deterministic iteration and tie-breakers ensure repeatable output.
+
+Ran visible tests:
+- dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests → 8/8 tests passed.

@@ -1,0 +1,6 @@
+{
+  "model": "claude-sonnet-4.6",
+  "label": "Claude Sonnet 4.6",
+  "effort": "max",
+  "maxAiCredits": 500
+}

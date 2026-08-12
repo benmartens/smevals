@@ -1,0 +1,3 @@
+Implemented `ReplicatedShardRebalancer.Rebalance` with deterministic, exact branch-and-bound placement search, rational utilization comparisons, capacity/exclusion/zone-diversity enforcement, movement minimization, and canonical tie-breaking.
+
+**Tests:** `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` — 9/9 passed; solution build passed; 100 randomized exhaustive-oracle cases and a `long.MaxValue` capacity edge case passed.

@@ -1,0 +1,3 @@
+Tried to read/modify the workspace but got "Permission denied" for file ops, so can't implement or run tests here. Please either (A) grant file access to the agent or (B) paste the QueryOptimizer source file so I can patch it.
+
+Planned implementation (will apply once access is available): deterministic bottom-up DP (Selinger-style) join-order enumerator with filter-pushdown, per-operator physical alternatives (scan/filter/project/join variants), cost-based selection using the provided model, and deterministic tie-breakers (stable serialization). After changes I'll run: dotnet run --project visible-tests\QueryOptimizer.VisibleTests and report results and a concise algorithm summary.

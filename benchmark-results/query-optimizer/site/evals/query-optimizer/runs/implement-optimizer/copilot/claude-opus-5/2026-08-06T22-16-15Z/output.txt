@@ -1,0 +1,11 @@
+Done — 7/7 visible tests pass.
+
+**Algorithm** (`src\QueryOptimizer\QueryOptimizer.cs`):
+
+1. **Leaf selection** — a leaf's output cardinality is the filtered row count regardless of access path, so each table independently takes the cheaper of `tableScan` vs. the best legal `indexSeek` (index column must exist *and* have an indexable predicate; first-match resolution mirrors the cost model).
+2. **Join enumeration** — exact bottom-up DP over table subsets (bitmask, ≤16 tables). A join node's cardinality depends only on its table *set*, so keeping the cheapest subtree per subset is provably optimal, and bushy trees are covered. Splits are enumerated so the left side always owns the smallest table ID, which yields the required canonical order for free and visits each split once; a precomputed reachability mask enforces the crossing-join-edge rule. Beyond 16 tables it falls back to a deterministic greedy fusion of the cheapest connected pair (O(n³)), and disconnected join graphs still emit a complete, deterministic tree.
+3. **Operator choice** — costs `nestedLoop`/`hashJoin`/`mergeJoin` with saturating integer arithmetic replicating `CostModel` exactly. Hash joins whose build side exceeds `memoryLimitRows` must partition and re-read both inputs, so selection prices their spill against the full input stream; the model's true cost is what propagates through the DP.
+
+**Tests run:** `dotnet run --project visible-tests\QueryOptimizer.VisibleTests` → 7/7 (index choice, 3-table join order, memory-aware choice, determinism, plus the three validator tests).
+
+Note: the sandbox denied all file-delete commands, so a leftover scratch file `workspace\tmpcheck.ps1` (unused, not referenced by the build) could not be removed — please delete it manually.

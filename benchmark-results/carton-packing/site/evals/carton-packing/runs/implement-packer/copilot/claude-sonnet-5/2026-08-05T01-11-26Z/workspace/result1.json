@@ -1,0 +1,84 @@
+{
+  "placements": [
+    {
+      "cartonId": "cube",
+      "instance": 0,
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 1,
+      "x": 0,
+      "y": 0,
+      "z": 5,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 2,
+      "x": 0,
+      "y": 5,
+      "z": 0,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 3,
+      "x": 0,
+      "y": 5,
+      "z": 5,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 4,
+      "x": 5,
+      "y": 0,
+      "z": 0,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 5,
+      "x": 5,
+      "y": 0,
+      "z": 5,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 6,
+      "x": 5,
+      "y": 5,
+      "z": 0,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    },
+    {
+      "cartonId": "cube",
+      "instance": 7,
+      "x": 5,
+      "y": 5,
+      "z": 5,
+      "width": 5,
+      "depth": 5,
+      "height": 5
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "model": "gpt-5-mini",
+  "label": "GPT-5 mini",
+  "effort": "high",
+  "maxAiCredits": 500
+}

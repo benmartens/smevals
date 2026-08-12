@@ -1,0 +1,266 @@
+{
+  "eval": "query-optimizer",
+  "grader": "default",
+  "grader_version": "b11801e",
+  "excluded_failed_runs": 0,
+  "rows": [
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "claude-opus-4.8",
+      "outcome": "fail",
+      "score": 0.402866,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.4029,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 6768
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\claude-opus-4.8\\2026-08-06T22-49-54Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "claude-opus-5",
+      "outcome": "pass",
+      "score": 0.946858,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.9469,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4861
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\claude-opus-5\\2026-08-06T22-16-15Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "claude-sonnet-4.6",
+      "outcome": "pass",
+      "score": 0.993347,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.9933,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4516
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\claude-sonnet-4.6\\2026-08-06T22-46-32Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "claude-sonnet-5",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4312
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\claude-sonnet-5\\2026-08-06T22-28-35Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gemini-3.6-flash",
+      "outcome": "pass",
+      "score": 0.993347,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.9933,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4700
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gemini-3.6-flash\\2026-08-06T23-32-18Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gpt-5-mini",
+      "outcome": "fail",
+      "score": 0.0,
+      "tags": [
+        "deterministic",
+        "issue_missing_plan"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 0.0,
+        "average_cost_ratio": 0.0,
+        "deterministic": true,
+        "hidden_cases_valid": 0,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4076
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gpt-5-mini\\2026-08-06T21-55-04Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gpt-5.3-codex",
+      "outcome": "pass",
+      "score": 0.993347,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.9933,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4373
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gpt-5.3-codex\\2026-08-06T21-56-12Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gpt-5.6-luna",
+      "outcome": "fail",
+      "score": 0.402866,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.4029,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4309
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gpt-5.6-luna\\2026-08-06T22-11-18Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gpt-5.6-sol",
+      "outcome": "pass",
+      "score": 1.0,
+      "tags": [
+        "all_valid",
+        "deterministic",
+        "high_score"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 1.0,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4255
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gpt-5.6-sol\\2026-08-06T22-00-10Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "gpt-5.6-terra",
+      "outcome": "fail",
+      "score": 0.402866,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.4029,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4124
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\gpt-5.6-terra\\2026-08-06T22-07-20Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "grok-4.5",
+      "outcome": "fail",
+      "score": 0.449141,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.4491,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 4206
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\grok-4.5\\2026-08-06T23-38-47Z"
+    },
+    {
+      "task": "implement-optimizer",
+      "config": "copilot",
+      "model": "mai-code-1-flash-picker",
+      "outcome": "pass",
+      "score": 0.848649,
+      "tags": [
+        "all_valid",
+        "deterministic"
+      ],
+      "metrics": {
+        "build_ok": true,
+        "valid_plan_rate": 1.0,
+        "average_cost_ratio": 0.8486,
+        "deterministic": true,
+        "hidden_cases_valid": 7,
+        "hidden_cases_total": 7,
+        "runtime_ms": 6028
+      },
+      "run_dir": "C:\\github\\smevals\\examples\\query-optimizer\\runs\\implement-optimizer\\copilot\\mai-code-1-flash-picker\\2026-08-06T23-47-42Z"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "nodes": [
+    { "id": "node-a", "zone": "east", "capacity": 12 },
+    { "id": "node-b", "zone": "east", "capacity": 12 },
+    { "id": "node-c", "zone": "west", "capacity": 12 },
+    { "id": "node-d", "zone": "west", "capacity": 12 }
+  ],
+  "shards": [
+    { "id": "orders", "size": 6, "replicationFactor": 2 },
+    { "id": "users", "size": 4, "replicationFactor": 2 }
+  ],
+  "currentPlacements": [
+    { "shardId": "orders", "nodeIds": ["node-a", "node-c"] },
+    { "shardId": "users", "nodeIds": ["node-a", "node-c"] }
+  ],
+  "exclusions": []
+}

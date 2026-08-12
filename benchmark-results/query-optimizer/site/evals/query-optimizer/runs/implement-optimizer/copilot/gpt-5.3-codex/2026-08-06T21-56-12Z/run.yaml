@@ -1,0 +1,23 @@
+task:
+  name: implement-optimizer
+  copilot_workspace: fixtures/starter
+  prompt: Implement QueryOptimizer.Optimize in the provided dependency-free .NET 10
+    solution. Read README.md carefully and preserve the public JSON/CLI contract.
+    The optimizer must return deterministic, valid physical plan trees while minimizing
+    the supplied integer cost model. You may modify source files in the workspace,
+    but do not add external packages or network dependencies. Run `dotnet run --project
+    visible-tests\QueryOptimizer.VisibleTests` until the visible tests pass. When
+    finished, respond with a concise summary of the algorithm and tests run.
+config:
+  name: copilot
+  runner: C:\Users\benmar\AppData\Local\Python\pythoncore-3.14-64\Scripts\smevals-copilot.exe
+  model: gpt-5.3-codex
+  copilot:
+    permissions: workspace
+    allow_tools:
+    - shell(dotnet:*)
+    effort: high
+    max_ai_credits: 500
+started: '2026-08-06T21:56:12.355377+00:00'
+duration_seconds: 237.66
+exit_code: 0

@@ -1,0 +1,16 @@
+The CLI invocation is blocked by an environment permission policy, but that's not needed for verification: the visible test suite already runs the **supplied `PackingValidator`** on every engine scenario (each asserts `report.IsValid`, covering bounds, overlap, full-base support, weight, orientation, and canonical ordering). All 9/9 pass, and I left the public models, CLI, and serialization untouched, so the JSON/CLI contract is preserved.
+
+## Summary
+
+Implemented `CartonPacker.Pack` (`src/CartonPacking/CartonPacker.cs`) — deterministic, dependency-free.
+
+**Algorithm**
+1. **Normalize** — drop malformed/duplicate carton types.
+2. **Selection (value-first)** — if total weight fits, take everything; otherwise a **bounded knapsack** over container weight maximizes total value, then total volume (weight‑0 cartons always included). This defeats the greedy weight/value trap (2 light > 1 heavy).
+3. **Placement** — constructive *drop-to-lowest-fully-supported-surface*: for each carton, every orientation × back-left candidate coordinate is tested; a slot is valid only when the footprint rests on a perfectly flat, fully-covered surface (floor or coplanar carton tops), which guarantees 100% base support and zero overlap. The lowest, most back-left slot wins deterministically.
+4. **Space fill** — remaining cartons are seated where weight and space still allow, recovering value/volume.
+5. Output sorted by carton ID, instance, X, Y, Z.
+
+Handles rotation, `keepUpright`, shared support, quantity, and weight limits.
+
+**Tests run:** `dotnet run --project visible-tests\CartonPacking.VisibleTests` → **9/9 passed** (4 helper + 5 engine: exact-fit, rotation-required, weight/value, upright restriction, determinism).

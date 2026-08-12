@@ -1,0 +1,6 @@
+{
+  "model": "gemini-3.6-flash",
+  "label": "Gemini 3.6 Flash",
+  "effort": "high",
+  "maxAiCredits": 500
+}

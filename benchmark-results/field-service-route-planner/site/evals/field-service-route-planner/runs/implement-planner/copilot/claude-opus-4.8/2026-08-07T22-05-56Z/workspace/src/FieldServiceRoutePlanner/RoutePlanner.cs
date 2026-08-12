@@ -1,0 +1,618 @@
+namespace FieldServiceRoutePlanner;
+
+/// <summary>
+/// Deterministic solver for the field-service routing problem.
+///
+/// Strategy:
+///   1. For each technician, run a Held-Karp style dynamic program over subsets
+///      of the jobs it is skill-compatible with. Each DP state keeps a Pareto
+///      frontier of (completion time, travel) pairs so that both time-window
+///      feasibility and travel minimization are captured. This yields, for every
+///      feasible subset of jobs, the minimum directed travel (including the
+///      return to the depot) for that technician.
+///   2. Combine the technicians with a subset dynamic program that assigns
+///      disjoint job sets, lexicographically maximizing total served value and
+///      then minimizing total travel.
+///   3. Reconstruct a deterministic (lexicographically smallest by job id) optimal
+///      ordering for each technician's chosen job set.
+///
+/// Budget guards keep the exact search bounded; if an instance is too large the
+/// solver falls back to a deterministic greedy insertion heuristic that always
+/// returns a valid plan.
+/// </summary>
+public sealed class RoutePlanner
+{
+    private const int Inf = int.MaxValue / 4;
+    private const long BuildBudget = 80_000_000L;
+    private const long CombineBudget = 80_000_000L;
+    private const int MaxCompatiblePerTech = 20;
+
+    private sealed class BudgetExceededException : Exception;
+
+    public RoutePlan Plan(RoutePlanningProblem problem)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+
+        try
+        {
+            var solved = SolveExact(problem);
+            if (solved is not null)
+            {
+                return solved;
+            }
+        }
+        catch (BudgetExceededException)
+        {
+            // Fall through to the greedy heuristic.
+        }
+
+        return SolveGreedy(problem);
+    }
+
+    // ------------------------------------------------------------------
+    // Shared problem view
+    // ------------------------------------------------------------------
+
+    private sealed class Context
+    {
+        public required string Depot;
+        public required Dictionary<string, Dictionary<string, int>> Travel;
+        public required List<ServiceJob> Jobs;
+        public required List<Technician> Technicians;
+
+        public int Travelling(string from, string to)
+        {
+            if (Travel.TryGetValue(from, out var row)
+                && row.TryGetValue(to, out var minutes)
+                && minutes >= 0)
+            {
+                return minutes;
+            }
+            return Inf;
+        }
+    }
+
+    private static Context BuildContext(RoutePlanningProblem problem) => new()
+    {
+        Depot = problem.Depot,
+        Travel = problem.TravelTimes,
+        Jobs = problem.Jobs,
+        // Every technician exactly once, ordered by id (canonical output order).
+        Technicians = problem.Technicians
+            .OrderBy(t => t.Id, StringComparer.Ordinal)
+            .ToList(),
+    };
+
+    private static bool Compatible(Technician technician, ServiceJob job)
+    {
+        var skills = new HashSet<string>(technician.Skills, StringComparer.Ordinal);
+        return job.RequiredSkills.All(skills.Contains);
+    }
+
+    // ------------------------------------------------------------------
+    // Exact solver
+    // ------------------------------------------------------------------
+
+    private RoutePlan? SolveExact(RoutePlanningProblem problem)
+    {
+        var ctx = BuildContext(problem);
+        var jobs = ctx.Jobs;
+        var n = jobs.Count;
+        if (n > 62)
+        {
+            return null; // Bitmask over jobs would overflow.
+        }
+
+        // Per-technician feasible subsets (global job bitmask -> min travel).
+        var techSets = new List<List<(long mask, int value, int travel)>>();
+        foreach (var technician in ctx.Technicians)
+        {
+            var compatible = new List<int>();
+            for (var i = 0; i < n; i++)
+            {
+                if (Compatible(technician, jobs[i]))
+                {
+                    compatible.Add(i);
+                }
+            }
+            if (compatible.Count > MaxCompatiblePerTech)
+            {
+                return null;
+            }
+
+            var sets = BuildTechnicianSets(ctx, technician, compatible);
+            techSets.Add(sets);
+        }
+
+        var (finalMask, chosen) = Combine(ctx, techSets);
+        if (chosen is null)
+        {
+            return null;
+        }
+
+        var routes = new List<TechnicianRoute>(ctx.Technicians.Count);
+        for (var t = 0; t < ctx.Technicians.Count; t++)
+        {
+            var technician = ctx.Technicians[t];
+            var mask = chosen[t];
+            var order = ReconstructOrder(ctx, technician, mask, techSets[t]);
+            routes.Add(new(technician.Id, order));
+        }
+
+        return new(routes);
+    }
+
+    /// <summary>
+    /// Held-Karp over subsets of the technician's compatible jobs. Returns every
+    /// feasible subset (as a global job bitmask) with its minimum directed travel
+    /// including the return trip to the depot. The empty set is always included.
+    /// </summary>
+    private List<(long mask, int value, int travel)> BuildTechnicianSets(
+        Context ctx,
+        Technician technician,
+        List<int> compatible)
+    {
+        var results = new List<(long, int, int)> { (0L, 0, 0) };
+        var k = compatible.Count;
+        if (k == 0)
+        {
+            return results;
+        }
+
+        var jobs = ctx.Jobs;
+        var loc = new string[k];
+        var dur = new int[k];
+        var ws = new int[k];
+        var we = new int[k];
+        var val = new int[k];
+        for (var j = 0; j < k; j++)
+        {
+            var job = jobs[compatible[j]];
+            loc[j] = job.Location;
+            dur[j] = job.Duration;
+            ws[j] = job.WindowStart;
+            we[j] = job.WindowEnd;
+            val[j] = job.Value;
+        }
+
+        // frontier[mask][last] -> Pareto set of (completion time, travel so far).
+        var frontier = new Dictionary<int, List<(int time, int travel)>[]>();
+        long ops = 0;
+
+        List<(int, int)>[] Row(int mask)
+        {
+            if (!frontier.TryGetValue(mask, out var arr))
+            {
+                arr = new List<(int, int)>[k];
+                frontier[mask] = arr;
+            }
+            return arr;
+        }
+
+        for (var j = 0; j < k; j++)
+        {
+            var travel = ctx.Travelling(ctx.Depot, loc[j]);
+            if (travel >= Inf)
+            {
+                continue;
+            }
+            var arrive = technician.ShiftStart + travel;
+            var start = Math.Max(arrive, ws[j]);
+            var end = start + dur[j];
+            if (end > we[j])
+            {
+                continue;
+            }
+            var row = Row(1 << j);
+            (row[j] ??= new()).Add((end, travel));
+        }
+
+        var full = 1 << k;
+        for (var mask = 1; mask < full; mask++)
+        {
+            if (!frontier.TryGetValue(mask, out var rows))
+            {
+                continue;
+            }
+            for (var last = 0; last < k; last++)
+            {
+                var entries = rows[last];
+                if (entries is null || entries.Count == 0)
+                {
+                    continue;
+                }
+                for (var c = 0; c < k; c++)
+                {
+                    if ((mask & (1 << c)) != 0)
+                    {
+                        continue;
+                    }
+                    var step = ctx.Travelling(loc[last], loc[c]);
+                    if (step >= Inf)
+                    {
+                        continue;
+                    }
+                    var nmask = mask | (1 << c);
+                    var target = Row(nmask);
+                    var list = target[c] ??= new();
+                    foreach (var (time, travel) in entries)
+                    {
+                        if (++ops > BuildBudget)
+                        {
+                            throw new BudgetExceededException();
+                        }
+                        var arrive = time + step;
+                        var start = Math.Max(arrive, ws[c]);
+                        var end = start + dur[c];
+                        if (end > we[c])
+                        {
+                            continue;
+                        }
+                        ParetoInsert(list, (end, travel + step));
+                    }
+                }
+            }
+        }
+
+        for (var mask = 1; mask < full; mask++)
+        {
+            if (!frontier.TryGetValue(mask, out var rows))
+            {
+                continue;
+            }
+            var best = Inf;
+            for (var last = 0; last < k; last++)
+            {
+                var entries = rows[last];
+                if (entries is null)
+                {
+                    continue;
+                }
+                var back = ctx.Travelling(loc[last], ctx.Depot);
+                if (back >= Inf)
+                {
+                    continue;
+                }
+                foreach (var (time, travel) in entries)
+                {
+                    if (time + back <= technician.ShiftEnd)
+                    {
+                        best = Math.Min(best, travel + back);
+                    }
+                }
+            }
+            if (best < Inf)
+            {
+                long gmask = 0;
+                var value = 0;
+                for (var j = 0; j < k; j++)
+                {
+                    if ((mask & (1 << j)) != 0)
+                    {
+                        gmask |= 1L << compatible[j];
+                        value += val[j];
+                    }
+                }
+                results.Add((gmask, value, best));
+            }
+        }
+
+        return results;
+    }
+
+    private static void ParetoInsert(List<(int time, int travel)> list, (int time, int travel) item)
+    {
+        for (var i = 0; i < list.Count; i++)
+        {
+            var e = list[i];
+            if (e.time <= item.time && e.travel <= item.travel)
+            {
+                return; // Dominated by an existing entry.
+            }
+        }
+        for (var i = list.Count - 1; i >= 0; i--)
+        {
+            var e = list[i];
+            if (item.time <= e.time && item.travel <= e.travel)
+            {
+                list.RemoveAt(i);
+            }
+        }
+        list.Add(item);
+    }
+
+    /// <summary>
+    /// Assigns disjoint job sets across technicians via a subset DP.
+    /// Lexicographic objective: maximize total value, then minimize total travel.
+    /// </summary>
+    private (long finalMask, long[]? chosen) Combine(
+        Context ctx,
+        List<List<(long mask, int value, int travel)>> techSets)
+    {
+        var techCount = ctx.Technicians.Count;
+
+        // Deterministic iteration order for each technician's option list.
+        foreach (var sets in techSets)
+        {
+            sets.Sort((a, b) => a.mask.CompareTo(b.mask));
+        }
+
+        var cur = new Dictionary<long, (int value, int travel)> { [0L] = (0, 0) };
+        var choices = new Dictionary<long, (long prev, long subset)>[techCount];
+        long ops = 0;
+
+        for (var t = 0; t < techCount; t++)
+        {
+            var next = new Dictionary<long, (int value, int travel)>();
+            var choice = new Dictionary<long, (long prev, long subset)>();
+            var options = techSets[t];
+
+            foreach (var mask in cur.Keys.OrderBy(m => m))
+            {
+                var (baseValue, baseTravel) = cur[mask];
+                foreach (var (subset, value, travel) in options)
+                {
+                    if ((subset & mask) != 0)
+                    {
+                        continue;
+                    }
+                    if (++ops > CombineBudget)
+                    {
+                        throw new BudgetExceededException();
+                    }
+                    var nmask = mask | subset;
+                    var nvalue = baseValue + value;
+                    var ntravel = baseTravel + travel;
+                    if (!next.TryGetValue(nmask, out var existing)
+                        || nvalue > existing.value
+                        || (nvalue == existing.value && ntravel < existing.travel))
+                    {
+                        next[nmask] = (nvalue, ntravel);
+                        choice[nmask] = (mask, subset);
+                    }
+                }
+            }
+
+            cur = next;
+            choices[t] = choice;
+        }
+
+        var bestMask = 0L;
+        var bestValue = -1;
+        var bestTravel = int.MaxValue;
+        foreach (var mask in cur.Keys.OrderBy(m => m))
+        {
+            var (value, travel) = cur[mask];
+            if (value > bestValue
+                || (value == bestValue && travel < bestTravel))
+            {
+                bestValue = value;
+                bestTravel = travel;
+                bestMask = mask;
+            }
+        }
+
+        if (bestValue < 0)
+        {
+            return (0L, null);
+        }
+
+        var chosen = new long[techCount];
+        var walk = bestMask;
+        for (var t = techCount - 1; t >= 0; t--)
+        {
+            var (prev, subset) = choices[t][walk];
+            chosen[t] = subset;
+            walk = prev;
+        }
+
+        return (bestMask, chosen);
+    }
+
+    /// <summary>
+    /// Reconstructs the lexicographically smallest (by job id) feasible ordering
+    /// of the chosen job set whose total travel equals the optimum for that set.
+    /// </summary>
+    private List<string> ReconstructOrder(
+        Context ctx,
+        Technician technician,
+        long mask,
+        List<(long mask, int value, int travel)> sets)
+    {
+        if (mask == 0)
+        {
+            return new();
+        }
+
+        var target = Inf;
+        foreach (var (m, _, travel) in sets)
+        {
+            if (m == mask)
+            {
+                target = travel;
+                break;
+            }
+        }
+
+        var jobs = new List<ServiceJob>();
+        for (var i = 0; i < ctx.Jobs.Count; i++)
+        {
+            if ((mask & (1L << i)) != 0)
+            {
+                jobs.Add(ctx.Jobs[i]);
+            }
+        }
+        jobs.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
+
+        var chosen = new List<ServiceJob>(jobs.Count);
+        var used = new bool[jobs.Count];
+
+        bool Dfs(string location, int time, int travel)
+        {
+            if (chosen.Count == jobs.Count)
+            {
+                var back = ctx.Travelling(location, ctx.Depot);
+                return back < Inf
+                    && travel + back == target
+                    && time + back <= technician.ShiftEnd;
+            }
+            for (var i = 0; i < jobs.Count; i++)
+            {
+                if (used[i])
+                {
+                    continue;
+                }
+                var job = jobs[i];
+                var step = ctx.Travelling(location, job.Location);
+                if (step >= Inf)
+                {
+                    continue;
+                }
+                var travelNext = travel + step;
+                if (travelNext > target)
+                {
+                    continue;
+                }
+                var arrive = time + step;
+                var start = Math.Max(arrive, job.WindowStart);
+                var end = start + job.Duration;
+                if (end > job.WindowEnd)
+                {
+                    continue;
+                }
+                used[i] = true;
+                chosen.Add(job);
+                if (Dfs(job.Location, end, travelNext))
+                {
+                    return true;
+                }
+                chosen.RemoveAt(chosen.Count - 1);
+                used[i] = false;
+            }
+            return false;
+        }
+
+        if (Dfs(ctx.Depot, technician.ShiftStart, 0))
+        {
+            return chosen.Select(j => j.Id).ToList();
+        }
+
+        // Should not happen for a feasible set; return a safe empty route.
+        return new();
+    }
+
+    // ------------------------------------------------------------------
+    // Greedy fallback (always produces a valid plan)
+    // ------------------------------------------------------------------
+
+    private RoutePlan SolveGreedy(RoutePlanningProblem problem)
+    {
+        var ctx = BuildContext(problem);
+        var routes = ctx.Technicians.ToDictionary(
+            t => t.Id,
+            _ => new List<ServiceJob>(),
+            StringComparer.Ordinal);
+
+        var assigned = new HashSet<string>(StringComparer.Ordinal);
+
+        while (true)
+        {
+            var bestValue = -1;
+            var bestTravel = int.MaxValue;
+            string? bestTech = null;
+            string? bestJobId = null;
+            int bestPos = -1;
+            List<ServiceJob>? bestRouteRef = null;
+
+            foreach (var technician in ctx.Technicians)
+            {
+                var route = routes[technician.Id];
+                var baseTravel = TryEvaluate(ctx, technician, route, out var rt) ? rt : 0;
+                foreach (var job in ctx.Jobs)
+                {
+                    if (assigned.Contains(job.Id) || !Compatible(technician, job))
+                    {
+                        continue;
+                    }
+                    for (var pos = 0; pos <= route.Count; pos++)
+                    {
+                        var candidate = new List<ServiceJob>(route);
+                        candidate.Insert(pos, job);
+                        if (!TryEvaluate(ctx, technician, candidate, out var travel))
+                        {
+                            continue;
+                        }
+                        var added = travel - baseTravel;
+                        // Prefer higher value; tie -> lower added travel; tie ->
+                        // lexicographically smaller job id for determinism.
+                        var better = job.Value > bestValue
+                            || (job.Value == bestValue && added < bestTravel)
+                            || (job.Value == bestValue && added == bestTravel
+                                && string.CompareOrdinal(job.Id, bestJobId) < 0);
+                        if (better)
+                        {
+                            bestValue = job.Value;
+                            bestTravel = added;
+                            bestTech = technician.Id;
+                            bestJobId = job.Id;
+                            bestPos = pos;
+                            bestRouteRef = route;
+                        }
+                    }
+                }
+            }
+
+            if (bestTech is null || bestJobId is null || bestRouteRef is null)
+            {
+                break;
+            }
+
+            var chosenJob = ctx.Jobs.First(j => j.Id == bestJobId);
+            bestRouteRef.Insert(bestPos, chosenJob);
+            assigned.Add(bestJobId);
+        }
+
+        var result = ctx.Technicians
+            .Select(t => new TechnicianRoute(t.Id, routes[t.Id].Select(j => j.Id).ToList()))
+            .ToList();
+        return new(result);
+    }
+
+    private static bool TryEvaluate(
+        Context ctx,
+        Technician technician,
+        List<ServiceJob> route,
+        out int travel)
+    {
+        travel = 0;
+        var location = ctx.Depot;
+        var time = technician.ShiftStart;
+        foreach (var job in route)
+        {
+            var step = ctx.Travelling(location, job.Location);
+            if (step >= Inf)
+            {
+                travel = Inf;
+                return false;
+            }
+            travel += step;
+            var arrive = time + step;
+            var start = Math.Max(arrive, job.WindowStart);
+            var end = start + job.Duration;
+            if (end > job.WindowEnd)
+            {
+                return false;
+            }
+            location = job.Location;
+            time = end;
+        }
+        var back = ctx.Travelling(location, ctx.Depot);
+        if (back >= Inf)
+        {
+            travel = Inf;
+            return false;
+        }
+        travel += back;
+        return time + back <= technician.ShiftEnd;
+    }
+}

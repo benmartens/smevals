@@ -1,0 +1,6 @@
+Implemented `CartonPacker.Pack` with deterministic extreme-point placement, orientation handling, full-base support checks, weight-aware knapsack selection, and bounded search/greedy packing for value then volume optimization.
+
+Validation completed:
+- Visible tests: **9/9 passed**
+- Solution build: **succeeded**
+- CLI exact-fit, rotation, and stacked-support scenarios: **validated successfully**

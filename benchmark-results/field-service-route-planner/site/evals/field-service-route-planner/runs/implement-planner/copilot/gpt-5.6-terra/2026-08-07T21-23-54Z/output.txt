@@ -1,0 +1,3 @@
+Implemented `RoutePlanner.Plan` with deterministic exact route optimization: Pareto-pruned feasible route enumeration per technician, followed by disjoint-route dynamic programming that maximizes served value and minimizes total directed travel.
+
+Validated with `dotnet run --project visible-tests\FieldServiceRoutePlanner.VisibleTests` (8/8 passing) and CLI scenarios using the supplied validator.

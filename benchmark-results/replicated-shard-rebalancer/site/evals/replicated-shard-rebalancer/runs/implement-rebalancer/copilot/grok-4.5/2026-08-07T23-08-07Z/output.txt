@@ -1,0 +1,13 @@
+## Summary
+
+Implemented `ReplicatedShardRebalancer.Rebalance` as an exact deterministic backtracking solver.
+
+**Algorithm**
+1. Sort nodes/shards by ordinal ID.
+2. For each shard, enumerate eligible node combinations of size `replicationFactor` that hit required zone diversity (pre-sorted → lex order).
+3. DFS assign combinations under capacity limits.
+4. Lex-minimize: max utilization → utilization spread (via max min-util) → moved bytes → moved replicas.
+5. Ordered DFS keeps the ordinally smallest placement on metric ties.
+6. Prune on incumbent max-util / move-cost bounds; emit canonical target placements.
+
+**Tests:** `dotnet run --project visible-tests\ReplicatedShardRebalancer.VisibleTests` → **9/9 passed**.
